@@ -87,6 +87,9 @@
         const Coins = (props) => (
             <IconBase {...props}><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></IconBase>
         );
+        const Users = (props) => (
+            <IconBase {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></IconBase>
+        );
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
@@ -134,6 +137,7 @@
                 }
             });
 
+            const [activeTab, setActiveTab] = useState('current'); // 'current' or 'killed'
             const [searchTerm, setSearchTerm] = useState('');
             const [filterType, setFilterType] = useState('All');
             const [isFormOpen, setIsFormOpen] = useState(false);
@@ -163,7 +167,7 @@
                     trades: [...newVillager.trades, { ...tempTrade }]
                 });
                 setTempTrade({ item: '', price: '' });
-                // Keep focus on item input for rapid entry if needed (optional implementation detail)
+                // Keep focus on item input for rapid entry
                 document.getElementById('trade-item-input').focus();
             };
 
@@ -213,7 +217,13 @@
                     hasTradeMatch;
                     
                 const matchesType = filterType === 'All' || v.type === filterType;
-                return matchesSearch && matchesType;
+                
+                // Tab Filter Logic:
+                // If tab is 'current', show Active and Missing (anything not Terminated)
+                // If tab is 'killed', show only Terminated
+                const matchesTab = activeTab === 'current' ? v.status !== 'Terminated' : v.status === 'Terminated';
+
+                return matchesSearch && matchesType && matchesTab;
             });
 
             const getStatusColor = (status) => {
@@ -244,6 +254,52 @@
                             </button>
                         </div>
 
+                        {/* Stats Summary */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-stone-800 p-3 rounded-lg border border-stone-700">
+                                <div className="text-stone-400 text-xs uppercase tracking-wider">Total Records</div>
+                                <div className="text-2xl font-bold text-emerald-400">{villagers.length}</div>
+                            </div>
+                            <div className="bg-stone-800 p-3 rounded-lg border border-stone-700">
+                                <div className="text-stone-400 text-xs uppercase tracking-wider">Active Traders</div>
+                                <div className="text-2xl font-bold text-blue-400">{villagers.filter(v => v.status === 'Active').length}</div>
+                            </div>
+                            <div className="bg-stone-800 p-3 rounded-lg border border-stone-700">
+                                <div className="text-stone-400 text-xs uppercase tracking-wider">Terminated</div>
+                                <div className="text-2xl font-bold text-red-400">{villagers.filter(v => v.status === 'Terminated').length}</div>
+                            </div>
+                            <div className="bg-stone-800 p-3 rounded-lg border border-stone-700">
+                                <div className="text-stone-400 text-xs uppercase tracking-wider">Librarians (Active)</div>
+                                <div className="text-2xl font-bold text-purple-400">{villagers.filter(v => v.type === 'Librarian' && v.status === 'Active').length}</div>
+                            </div>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex space-x-1 bg-stone-800 p-1 rounded-lg border border-stone-700">
+                            <button 
+                                onClick={() => setActiveTab('current')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-bold transition-all ${
+                                    activeTab === 'current' 
+                                        ? 'bg-stone-700 text-white shadow-md' 
+                                        : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'
+                                }`}
+                            >
+                                <Users size={16} />
+                                Current Villagers
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('killed')}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-bold transition-all ${
+                                    activeTab === 'killed' 
+                                        ? 'bg-red-900/30 text-red-200 shadow-md border border-red-900/50' 
+                                        : 'text-stone-500 hover:text-red-300 hover:bg-stone-800'
+                                }`}
+                            >
+                                <Skull size={16} />
+                                Villagers Killed
+                            </button>
+                        </div>
+
                         {/* Search & Filter */}
                         <div className="flex flex-col md:flex-row gap-4 bg-stone-800 p-4 rounded-lg border border-stone-700">
                             <div className="relative flex-1">
@@ -252,7 +308,7 @@
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="Search ID, Item Name, or Notes..."
+                                    placeholder={`Search items, IDs, or notes in ${activeTab === 'current' ? 'active' : 'graveyard'}...`}
                                     className="w-full bg-stone-900 border border-stone-700 rounded-lg py-2 pl-10 pr-4 text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -281,7 +337,10 @@
                         <div className="grid gap-4">
                             {filteredVillagers.length === 0 ? (
                                 <div className="text-center py-12 text-stone-500 bg-stone-800/50 rounded-lg border border-stone-700 border-dashed">
-                                    No villagers found matching your search.
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="opacity-50">{activeTab === 'current' ? <Users size={48} /> : <Skull size={48} />}</div>
+                                        <p>No {activeTab === 'current' ? 'active' : 'terminated'} villagers found.</p>
+                                    </div>
                                 </div>
                             ) : (
                                 filteredVillagers.map((villager) => (
@@ -289,7 +348,7 @@
                                         key={villager.id} 
                                         className={`group relative bg-stone-800 rounded-lg p-4 border transition-all ${
                                             villager.status === 'Terminated' 
-                                                ? 'border-red-900/50 opacity-60' 
+                                                ? 'border-red-900/50 bg-stone-900/30' 
                                                 : 'border-stone-700 hover:border-emerald-500/50'
                                         }`}
                                     >
@@ -297,7 +356,7 @@
                                             {/* Left: ID & Main Info */}
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3 mb-3">
-                                                    <span className="font-mono text-lg font-bold text-emerald-300 bg-stone-900 px-2 py-1 rounded border border-stone-700">
+                                                    <span className={`font-mono text-lg font-bold px-2 py-1 rounded border ${villager.status === 'Terminated' ? 'text-red-400 bg-red-900/20 border-red-900/50' : 'text-emerald-300 bg-stone-900 border-stone-700'}`}>
                                                         {villager.id}
                                                     </span>
                                                     <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${getStatusColor(villager.status)}`}>
@@ -309,19 +368,31 @@
                                                 </div>
                                                 
                                                 {/* Trades List */}
-                                                <div className="mb-4 bg-stone-900/50 rounded-md border border-stone-700/50 p-2">
+                                                <div className={`mb-4 rounded-md border p-2 ${villager.status === 'Terminated' ? 'bg-red-900/10 border-red-900/30' : 'bg-stone-900/50 border-stone-700/50'}`}>
                                                     <div className="text-xs text-stone-500 uppercase tracking-wider mb-2 font-semibold flex items-center gap-1">
-                                                        <Coins size={12} /> Known Trades
+                                                        <Coins size={12} /> {villager.status === 'Terminated' ? 'Lost Trades' : 'Known Trades'}
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {villager.trades && villager.trades.map((t, idx) => (
-                                                            <div key={idx} className="flex justify-between items-center text-sm bg-stone-800 px-2 py-1 rounded border border-stone-700">
-                                                                <span className="text-stone-200">{t.item}</span>
-                                                                <span className="text-emerald-400 font-mono">
-                                                                    {t.price} <span className="text-[10px] text-emerald-600">EM</span>
-                                                                </span>
-                                                            </div>
-                                                        ))}
+                                                        {villager.trades && villager.trades.map((t, idx) => {
+                                                            // Highlight logic: check if search term matches the item name
+                                                            const isTradeMatch = searchTerm && t.item.toLowerCase().includes(searchTerm.toLowerCase());
+                                                            
+                                                            return (
+                                                                <div key={idx} className={`flex justify-between items-center text-sm px-2 py-1 rounded border transition-colors
+                                                                    ${isTradeMatch 
+                                                                        ? 'bg-emerald-900/40 border-emerald-500 ring-1 ring-emerald-500/50' 
+                                                                        : (villager.status === 'Terminated' ? 'bg-stone-900/50 border-stone-800 opacity-60' : 'bg-stone-800 border-stone-700')
+                                                                    }
+                                                                `}>
+                                                                    <span className={isTradeMatch ? "text-emerald-100 font-bold" : "text-stone-200"}>
+                                                                        {t.item}
+                                                                    </span>
+                                                                    <span className={`${villager.status === 'Terminated' ? 'text-red-400/70' : 'text-emerald-400'} font-mono`}>
+                                                                        {t.price} <span className="text-[10px] opacity-70">EM</span>
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
                                                         {(!villager.trades || villager.trades.length === 0) && (
                                                             <span className="text-stone-600 text-sm italic">No trades recorded.</span>
                                                         )}
@@ -345,7 +416,7 @@
                                             <div className="flex md:flex-col justify-end gap-2 md:border-l border-stone-700 md:pl-4">
                                                 <button 
                                                     onClick={() => toggleStatus(villager.id)}
-                                                    className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-green-400' : 'text-stone-400'}`}
+                                                    className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-emerald-400' : 'text-stone-400 hover:text-red-400'}`}
                                                     title={villager.status === 'Terminated' ? "Revive (Correction)" : "Mark as Terminated"}
                                                 >
                                                     {villager.status === 'Terminated' ? <Check size={18} /> : <Skull size={18} />}
