@@ -90,6 +90,9 @@
         const Users = (props) => (
             <IconBase {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></IconBase>
         );
+        const Pencil = (props) => (
+            <IconBase {...props}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></IconBase>
+        );
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
@@ -112,37 +115,28 @@
                 },
             ];
 
-            // Migration logic for old data format
             const [villagers, setVillagers] = useState(() => {
                 const saved = localStorage.getItem('villagerCatalogue');
                 if (!saved) return initialVillagers;
-                
                 try {
                     const parsed = JSON.parse(saved);
-                    // Migrate old singular "trade" to new "trades" array if needed
                     return parsed.map(v => {
                         if (v.trade && !v.trades) {
-                            return {
-                                ...v,
-                                trades: [{ item: v.trade, price: v.price }],
-                                trade: undefined, // cleanup
-                                price: undefined  // cleanup
-                            };
+                            return { ...v, trades: [{ item: v.trade, price: v.price }], trade: undefined, price: undefined };
                         }
                         return v;
                     });
                 } catch (e) {
-                    console.error("Migration failed", e);
                     return initialVillagers;
                 }
             });
 
-            const [activeTab, setActiveTab] = useState('current'); // 'current' or 'killed'
+            const [activeTab, setActiveTab] = useState('current');
             const [searchTerm, setSearchTerm] = useState('');
             const [filterType, setFilterType] = useState('All');
             const [isFormOpen, setIsFormOpen] = useState(false);
+            const [editingId, setEditingId] = useState(null); // Tracks which ID we are editing
             
-            // New Villager Form State
             const [newVillager, setNewVillager] = useState({
                 id: '',
                 type: 'Librarian',
@@ -151,12 +145,27 @@
                 notes: ''
             });
 
-            // Temporary state for adding a trade inside the form
             const [tempTrade, setTempTrade] = useState({ item: '', price: '' });
 
             useEffect(() => {
                 localStorage.setItem('villagerCatalogue', JSON.stringify(villagers));
             }, [villagers]);
+
+            // --- Handlers ---
+
+            const openNewVillagerForm = () => {
+                setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
+                setTempTrade({ item: '', price: '' });
+                setEditingId(null);
+                setIsFormOpen(true);
+            };
+
+            const handleEditClick = (villager) => {
+                setNewVillager({ ...villager });
+                setTempTrade({ item: '', price: '' });
+                setEditingId(villager.id);
+                setIsFormOpen(true);
+            };
 
             const handleAddTrade = (e) => {
                 e.preventDefault();
@@ -167,7 +176,6 @@
                     trades: [...newVillager.trades, { ...tempTrade }]
                 });
                 setTempTrade({ item: '', price: '' });
-                // Keep focus on item input for rapid entry
                 document.getElementById('trade-item-input').focus();
             };
 
@@ -176,17 +184,23 @@
                 setNewVillager({ ...newVillager, trades: updatedTrades });
             };
 
-            const handleAddVillager = (e) => {
+            const handleSaveVillager = (e) => {
                 e.preventDefault();
-                // If the user typed a trade but forgot to hit "Add Trade", add it for them
+                
                 let finalTrades = [...newVillager.trades];
                 if (tempTrade.item && tempTrade.price) {
                     finalTrades.push(tempTrade);
                 }
 
-                setVillagers([...villagers, { ...newVillager, trades: finalTrades, status: 'Active' }]);
+                if (editingId) {
+                    // Update existing
+                    setVillagers(villagers.map(v => v.id === editingId ? { ...newVillager, trades: finalTrades } : v));
+                    setEditingId(null);
+                } else {
+                    // Create new
+                    setVillagers([...villagers, { ...newVillager, trades: finalTrades, status: 'Active' }]);
+                }
                 
-                // Reset Form
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '' });
                 setIsFormOpen(false);
@@ -208,21 +222,13 @@
             };
 
             const filteredVillagers = villagers.filter(v => {
-                // Search trades array
                 const hasTradeMatch = v.trades && v.trades.some(t => t.item.toLowerCase().includes(searchTerm.toLowerCase()));
-                
                 const matchesSearch = 
                     v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     v.notes.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     hasTradeMatch;
-                    
                 const matchesType = filterType === 'All' || v.type === filterType;
-                
-                // Tab Filter Logic:
-                // If tab is 'current', show Active and Missing (anything not Terminated)
-                // If tab is 'killed', show only Terminated
                 const matchesTab = activeTab === 'current' ? v.status !== 'Terminated' : v.status === 'Terminated';
-
                 return matchesSearch && matchesType && matchesTab;
             });
 
@@ -246,7 +252,7 @@
                                 <p className="text-stone-400 text-sm mt-1">Manage your Bedrock villagers, trades, and locations.</p>
                             </div>
                             <button 
-                                onClick={() => setIsFormOpen(true)}
+                                onClick={openNewVillagerForm}
                                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/50"
                             >
                                 <Plus size={20} />
@@ -374,9 +380,7 @@
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                         {villager.trades && villager.trades.map((t, idx) => {
-                                                            // Highlight logic: check if search term matches the item name
                                                             const isTradeMatch = searchTerm && t.item.toLowerCase().includes(searchTerm.toLowerCase());
-                                                            
                                                             return (
                                                                 <div key={idx} className={`flex justify-between items-center text-sm px-2 py-1 rounded border transition-colors
                                                                     ${isTradeMatch 
@@ -415,8 +419,15 @@
                                             {/* Right: Actions */}
                                             <div className="flex md:flex-col justify-end gap-2 md:border-l border-stone-700 md:pl-4">
                                                 <button 
+                                                    onClick={() => handleEditClick(villager)}
+                                                    className="p-2 rounded hover:bg-stone-700 text-stone-400 hover:text-blue-400 transition-colors"
+                                                    title="Edit Villager"
+                                                >
+                                                    <Pencil size={18} />
+                                                </button>
+                                                <button 
                                                     onClick={() => toggleStatus(villager.id)}
-                                                    className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-emerald-400' : 'text-stone-400 hover:text-red-400'}`}
+                                                    className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-emerald-400' : 'text-stone-400 hover:text-yellow-400'}`}
                                                     title={villager.status === 'Terminated' ? "Revive (Correction)" : "Mark as Terminated"}
                                                 >
                                                     {villager.status === 'Terminated' ? <Check size={18} /> : <Skull size={18} />}
@@ -435,18 +446,20 @@
                             )}
                         </div>
 
-                        {/* Add Modal */}
+                        {/* Add/Edit Modal */}
                         {isFormOpen && (
                             <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
                                 <div className="bg-stone-800 rounded-xl border border-stone-600 w-full max-w-lg shadow-2xl my-8">
                                     <div className="flex justify-between items-center p-4 border-b border-stone-700 sticky top-0 bg-stone-800 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white">Log New Villager</h2>
+                                        <h2 className="text-xl font-bold text-white">
+                                            {editingId ? 'Edit Villager' : 'Log New Villager'}
+                                        </h2>
                                         <button onClick={() => setIsFormOpen(false)} className="text-stone-400 hover:text-white">
                                             <X size={24} />
                                         </button>
                                     </div>
                                     
-                                    <form onSubmit={handleAddVillager} className="p-4 space-y-4">
+                                    <form onSubmit={handleSaveVillager} className="p-4 space-y-4">
                                         {/* Basic Info */}
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="col-span-2">
@@ -555,7 +568,7 @@
 
                                         <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2">
                                             <Save size={18} />
-                                            Save to Catalogue
+                                            {editingId ? 'Update Villager' : 'Save to Catalogue'}
                                         </button>
                                     </form>
                                 </div>
