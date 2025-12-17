@@ -137,6 +137,9 @@
         const Copy = (props) => (
             <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></IconBase>
         );
+        const GridIcon = (props) => (
+            <IconBase {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></IconBase>
+        );
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
@@ -193,6 +196,7 @@
             const [sortType, setSortType] = useState('Newest');
             const [isFormOpen, setIsFormOpen] = useState(false);
             const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+            const [isVacancyOpen, setIsVacancyOpen] = useState(false);
             const [editingId, setEditingId] = useState(null); 
             
             // Toast State
@@ -205,6 +209,9 @@
                 location: '',
                 notes: ''
             });
+
+            // Added forceIdNumber to track if user picked a vacancy
+            const [forceIdNumber, setForceIdNumber] = useState(null);
 
             const [tradeCode, setTradeCode] = useState('');
             const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
@@ -234,6 +241,7 @@
                     if (e.key === 'Escape') {
                         setIsFormOpen(false);
                         setIsSettingsOpen(false);
+                        setIsVacancyOpen(false);
                     }
                     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                         e.preventDefault();
@@ -265,8 +273,7 @@
                 navigator.clipboard.writeText(text).then(() => {
                     showToast(`Copied info for ${villager.id}`);
                 }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                    showToast('Failed to copy to clipboard', 'error');
+                    showToast('Failed to copy', 'error');
                 });
             };
 
@@ -293,6 +300,11 @@
                 const tCode = (tradeTag && tradeTag.length >= 2) ? tradeTag.substring(0, 3).toUpperCase() : 'XXX';
                 const prefix = `${profCode}-${tCode}`;
                 
+                // If a specific number is forced (e.g. from vacancy fill), use it
+                if (forceIdNumber !== null) {
+                    return `${prefix}-${forceIdNumber.toString().padStart(3, '0')}`;
+                }
+
                 const allNumbers = villagers
                     .filter(v => v.id !== excludeId)
                     .map(v => {
@@ -310,15 +322,16 @@
                     const generated = generateId(newVillager.type, tradeCode);
                     setNewVillager(prev => ({ ...prev, id: generated }));
                 }
-            }, [newVillager.type, tradeCode, villagers]);
+            }, [newVillager.type, tradeCode, villagers, forceIdNumber]);
 
             // --- Handlers ---
-            const openNewVillagerForm = () => {
+            const openNewVillagerForm = (preFilledNumber = null) => {
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
                 setTradeCode('');
                 setEditingId(null);
                 setEditingTradeIndex(null);
+                setForceIdNumber(preFilledNumber);
                 setIsFormOpen(true);
             };
 
@@ -330,6 +343,7 @@
                 else setTradeCode('');
                 setEditingId(villager.id);
                 setEditingTradeIndex(null);
+                setForceIdNumber(null);
                 setIsFormOpen(true);
             };
 
@@ -424,6 +438,7 @@
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
                 setTradeCode('');
                 setEditingTradeIndex(null);
+                setForceIdNumber(null);
                 setIsFormOpen(false);
             };
 
@@ -443,6 +458,23 @@
                     setVillagers(villagers.filter(v => v.id !== id));
                     showToast("Record permanently deleted.", "error");
                 }
+            };
+
+            const handleClearAllData = () => {
+                if (confirm('WARNING: This will permanently delete ALL villager records. Are you sure?')) {
+                    if (confirm('Final check: This action cannot be undone. Delete everything?')) {
+                        setVillagers([]);
+                        setManualDeaths(0);
+                        showToast('All data cleared.', 'error');
+                        setIsSettingsOpen(false);
+                    }
+                }
+            };
+
+            // --- Vacancy Handlers ---
+            const handleVacancyClick = (num) => {
+                setIsVacancyOpen(false);
+                openNewVillagerForm(num);
             };
 
             // --- Settings Handlers ---
@@ -537,6 +569,33 @@
             const recordedDeaths = villagers.filter(v => v.status === 'Terminated').length;
             const totalDeaths = recordedDeaths + manualDeaths;
 
+            // --- Vacancy Calc ---
+            const getVacancyData = () => {
+                const activeIds = new Set();
+                const terminatedIds = new Set();
+                let maxNum = 0;
+
+                villagers.forEach(v => {
+                    const match = v.id.match(/-(\d{3})$/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num > maxNum) maxNum = num;
+                        if (v.status === 'Active') activeIds.add(num);
+                        else terminatedIds.add(num);
+                    }
+                });
+
+                const grid = [];
+                for (let i = 1; i <= maxNum; i++) {
+                    let status = 'empty';
+                    if (activeIds.has(i)) status = 'active';
+                    else if (terminatedIds.has(i)) status = 'terminated';
+                    
+                    grid.push({ num: i, status });
+                }
+                return grid;
+            };
+
             // --- Validation & Styles ---
             const getValidationIssues = (villager) => {
                 const issues = [];
@@ -547,8 +606,8 @@
 
             const getStatusColor = (status) => {
                 switch(status) {
-                    case 'Active': return 'bg-purple-900/30 text-purple-300 border-purple-700'; // Purple glow for active
-                    case 'Terminated': return 'bg-orange-900/20 text-orange-400 border-orange-700'; // Orange/Red for terminated
+                    case 'Active': return 'bg-purple-900/30 text-purple-300 border-purple-700'; 
+                    case 'Terminated': return 'bg-orange-900/20 text-orange-400 border-orange-700'; 
                     case 'Missing': return 'bg-yellow-900/20 text-yellow-500 border-yellow-700';
                     default: return 'bg-neutral-800 text-neutral-400';
                 }
@@ -566,11 +625,12 @@
                             </div>
                             
                             <div className="flex gap-2">
+                                <button onClick={() => setIsVacancyOpen(true)} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="View ID Vacancies"><GridIcon size={20} /></button>
                                 <button onClick={() => setIsSettingsOpen(true)} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="Settings / Tag Dictionary"><Settings size={20} /></button>
                                 <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
                                 <button onClick={() => fileInputRef.current.click()} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="Import Data"><Upload size={20} /></button>
                                 <button onClick={handleExport} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="Export Data"><Download size={20} /></button>
-                                <button onClick={openNewVillagerForm} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-orange-900/50"><Plus size={20} /><span>Log Villager</span></button>
+                                <button onClick={() => openNewVillagerForm(null)} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-orange-900/50"><Plus size={20} /><span>Log Villager</span></button>
                             </div>
                         </div>
 
@@ -761,6 +821,39 @@
                             ))}
                         </div>
 
+                        {/* Vacancy Modal */}
+                        {isVacancyOpen && (
+                            <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
+                                <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-lg shadow-2xl my-8">
+                                    <div className="flex justify-between items-center p-4 border-b border-neutral-700 sticky top-0 bg-neutral-900 rounded-t-xl z-10">
+                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><GridIcon size={20} /> ID Slot Status</h2>
+                                        <button onClick={() => setIsVacancyOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
+                                    </div>
+                                    <div className="p-4">
+                                        <p className="text-sm text-neutral-400 mb-4">Click a <span className="text-red-400 font-bold">Red</span> (Terminated) or <span className="text-neutral-500 font-bold">Grey</span> (Empty) slot to reclaim the ID number.</p>
+                                        <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                                            {getVacancyData().map((slot) => (
+                                                <button 
+                                                    key={slot.num}
+                                                    disabled={slot.status === 'active'}
+                                                    onClick={() => slot.status !== 'active' && handleVacancyClick(slot.num)}
+                                                    className={`
+                                                        aspect-square rounded flex items-center justify-center font-mono text-sm border transition-all
+                                                        ${slot.status === 'active' ? 'bg-purple-900/50 border-purple-600 text-purple-200 cursor-default' : 
+                                                          slot.status === 'terminated' ? 'bg-red-900/20 border-red-600 text-red-400 hover:bg-red-900/40 cursor-pointer' : 
+                                                          'bg-neutral-800/30 border-dashed border-neutral-600 text-neutral-500 hover:bg-neutral-800 hover:text-white cursor-pointer'}
+                                                    `}
+                                                    title={slot.status === 'active' ? 'Occupied' : slot.status === 'terminated' ? 'Terminated (Open)' : 'Empty Slot'}
+                                                >
+                                                    {slot.num.toString().padStart(3, '0')}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Settings Modal */}
                         {isSettingsOpen && (
                             <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
@@ -783,6 +876,17 @@
                                                     <div className="flex items-center gap-3"><span className="font-mono text-purple-400 font-bold">{value}</span><button onClick={() => handleDeleteOverride(key)} className="text-neutral-500 hover:text-red-400"><Trash2 size={16}/></button></div>
                                                 </div>
                                             ))}
+                                        </div>
+                                        
+                                        <div className="pt-4 border-t border-neutral-700">
+                                            <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2"><AlertTriangle size={16}/> Danger Zone</h3>
+                                            <button 
+                                                onClick={handleClearAllData}
+                                                className="w-full bg-red-900/30 hover:bg-red-900/50 text-red-200 border border-red-800 p-3 rounded flex items-center justify-center gap-2 transition-colors"
+                                            >
+                                                <Trash2 size={18} /> Clear All Villager Data
+                                            </button>
+                                            <p className="text-xs text-neutral-500 mt-1 text-center">Permanently deletes all {villagers.length} records. This cannot be undone.</p>
                                         </div>
                                     </div>
                                 </div>
