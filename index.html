@@ -121,6 +121,9 @@
         const Star = (props) => (
             <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase>
         );
+        const RefreshCw = (props) => (
+            <IconBase {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconBase>
+        );
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
@@ -201,24 +204,17 @@
             // --- Smart Tag Generator ---
             const generateSmartTag = (text) => {
                 if (!text) return 'XXX';
-                // Remove vowels (case insensitive) and take first 3 chars
-                // If the word starts with a vowel, we generally keep it in many systems, 
-                // but for "MND" from "Mending", standard vowel removal works: M(e)nd(i)ng -> Mndng
-                // "Unbreaking" -> (U)nbr(ea)k(i)ng -> nbrkng ? Wait, usually keep first letter.
-                // Let's do: Keep first letter, strip vowels from rest, then take first 3.
                 
                 const firstChar = text.charAt(0);
                 const rest = text.slice(1).replace(/[aeiou]/gi, '');
                 const combined = firstChar + rest;
                 
-                // If the word is very short (e.g. "Ink"), this might be too aggressive.
-                // Fallback to simple substring if stripped version is too short.
                 const code = combined.length >= 2 ? combined : text;
                 return code.substring(0, 3).toUpperCase();
             };
 
             // --- ID Generation Logic ---
-            const generateId = (profession, tradeTag) => {
+            const generateId = (profession, tradeTag, excludeId = null) => {
                 if (!profession) return '';
                 
                 const professionMap = {
@@ -240,6 +236,7 @@
                 const pattern = new RegExp(`^${prefix}-(\\d+)$`);
                 
                 const existingNums = villagers
+                    .filter(v => v.id !== excludeId) // Exclude the ID being edited to prevent skipping its own sequence number if valid
                     .map(v => {
                         const match = v.id.match(pattern);
                         return match ? parseInt(match[1], 10) : null;
@@ -284,10 +281,16 @@
                 setIsFormOpen(true);
             };
 
+            const handleRegenerateId = () => {
+                // Manually trigger ID generation, ignoring the current ID to keep sequence correct
+                const generated = generateId(newVillager.type, tradeCode, editingId);
+                setNewVillager(prev => ({ ...prev, id: generated }));
+            };
+
             const toggleStar = (index) => {
                 const updatedTrades = newVillager.trades.map((t, i) => ({
                     ...t,
-                    isStarred: i === index // Toggle behavior: Only one can be starred at a time? Or toggle? Let's make it select one.
+                    isStarred: i === index
                 }));
                 
                 // If we are "starring" a trade, generate the code from it
@@ -376,11 +379,6 @@
                      // Edge case: if we just added the very first trade via save, update code
                     if (!tradeCode && finalTrades.length === 1 && editingTradeIndex === null) {
                         // We can't setState inside here for the ID generation of *this* save
-                        // But we can update the local variables used for generation
-                        // However, ID generation is reactive to state. 
-                        // For simplicity, user might need to edit again to fix ID if they rush.
-                        // OR we force a code generation right here for the final ID:
-                        // But we'll rely on the user seeing the code box.
                     }
                 }
                 
@@ -825,7 +823,17 @@
                                         <div className="bg-stone-900/80 p-3 rounded-lg border border-emerald-500/30 flex items-center justify-between">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] uppercase text-stone-500 tracking-wider font-bold">Generated ID Tag</span>
-                                                <span className="font-mono text-2xl text-emerald-400 tracking-wider font-bold">{newVillager.id || '---'}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono text-2xl text-emerald-400 tracking-wider font-bold">{newVillager.id || '---'}</span>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={handleRegenerateId}
+                                                        className="p-1.5 bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-emerald-400 rounded transition-colors border border-stone-600"
+                                                        title="Regenerate ID (Overrides current)"
+                                                    >
+                                                        <RefreshCw size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-[10px] text-stone-500 mb-1">Trade Tag (e.g. MND)</div>
