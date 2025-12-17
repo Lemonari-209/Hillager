@@ -112,6 +112,15 @@
         const AlertTriangle = (props) => (
             <IconBase {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase>
         );
+        const ArrowRight = (props) => (
+            <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></IconBase>
+        );
+        const ShoppingBag = (props) => (
+            <IconBase {...props}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></IconBase>
+        );
+        const Star = (props) => (
+            <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase>
+        );
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
@@ -119,7 +128,7 @@
                 { 
                     id: 'LIB-MND-001', 
                     type: 'Librarian', 
-                    trades: [{ item: 'Mending', price: 10, costItem: 'Book', costQty: 1 }, { item: 'Paper', price: 24, isBuy: true }], 
+                    trades: [{ item: 'Mending', price: 10, costItem: 'Book', costQty: 1, isBuy: false, isStarred: true }, { item: 'Paper', price: 24, isBuy: true }], 
                     location: 'Enchanted Hall', 
                     status: 'Active', 
                     notes: 'First mending villager' 
@@ -127,7 +136,7 @@
                 { 
                     id: 'FLE-STK-001', 
                     type: 'Fletcher', 
-                    trades: [{ item: 'Sticks', price: 32, isBuy: true }, { item: 'Flint', price: 26, isBuy: true }], 
+                    trades: [{ item: 'Sticks', price: 32, isBuy: true, isStarred: true }, { item: 'Flint', price: 26, isBuy: true }], 
                     location: 'Fletcher Hall', 
                     status: 'Active', 
                     notes: 'Zombie cured once' 
@@ -146,8 +155,9 @@
                 try {
                     const parsed = JSON.parse(saved);
                     return parsed.map(v => {
+                        // Migrate old data
                         if (v.trade && !v.trades) {
-                            return { ...v, trades: [{ item: v.trade, price: v.price }], trade: undefined, price: undefined };
+                            return { ...v, trades: [{ item: v.trade, price: v.price, isBuy: false }], trade: undefined, price: undefined };
                         }
                         return v;
                     });
@@ -156,9 +166,10 @@
                 }
             });
 
-            const [activeTab, setActiveTab] = useState('current');
+            const [activeTab, setActiveTab] = useState('buy'); // 'buy' or 'sell'
             const [searchTerm, setSearchTerm] = useState('');
             const [filterType, setFilterType] = useState('All');
+            const [filterStatus, setFilterStatus] = useState('Active'); // New filter for Status
             const [sortType, setSortType] = useState('Newest');
             const [isFormOpen, setIsFormOpen] = useState(false);
             const [editingId, setEditingId] = useState(null); 
@@ -171,10 +182,11 @@
                 notes: ''
             });
 
-            // State for the simplified naming system
             const [tradeCode, setTradeCode] = useState('');
 
-            const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '' });
+            // Added isBuy to trade state (default false = Player Buy)
+            const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
+            const [editingTradeIndex, setEditingTradeIndex] = useState(null);
             
             const fileInputRef = useRef(null);
 
@@ -186,12 +198,29 @@
                 localStorage.setItem('villagerManualDeaths', manualDeaths.toString());
             }, [manualDeaths]);
 
+            // --- Smart Tag Generator ---
+            const generateSmartTag = (text) => {
+                if (!text) return 'XXX';
+                // Remove vowels (case insensitive) and take first 3 chars
+                // If the word starts with a vowel, we generally keep it in many systems, 
+                // but for "MND" from "Mending", standard vowel removal works: M(e)nd(i)ng -> Mndng
+                // "Unbreaking" -> (U)nbr(ea)k(i)ng -> nbrkng ? Wait, usually keep first letter.
+                // Let's do: Keep first letter, strip vowels from rest, then take first 3.
+                
+                const firstChar = text.charAt(0);
+                const rest = text.slice(1).replace(/[aeiou]/gi, '');
+                const combined = firstChar + rest;
+                
+                // If the word is very short (e.g. "Ink"), this might be too aggressive.
+                // Fallback to simple substring if stripped version is too short.
+                const code = combined.length >= 2 ? combined : text;
+                return code.substring(0, 3).toUpperCase();
+            };
+
             // --- ID Generation Logic ---
-            
             const generateId = (profession, tradeTag) => {
                 if (!profession) return '';
                 
-                // Custom Profession Codes
                 const professionMap = {
                     'Farmer': 'FRM',
                     'Cleric': 'CLE',
@@ -200,7 +229,6 @@
                     'Armorer': 'ARM',
                     'Fletcher': 'FLE',
                     'Librarian': 'LIB',
-                    // Defaults for others if needed, otherwise uses first 3 letters
                     'Fisherman': 'FSH', 
                     'Shepherd': 'SHP'
                 };
@@ -209,8 +237,6 @@
                 const tCode = (tradeTag && tradeTag.length >= 2) ? tradeTag.substring(0, 3).toUpperCase() : 'XXX';
                 const prefix = `${profCode}-${tCode}`;
                 
-                // Find existing IDs with this prefix to determine sequence number
-                // Only look at IDs that match the pattern PPP-TTT-###
                 const pattern = new RegExp(`^${prefix}-(\\d+)$`);
                 
                 const existingNums = villagers
@@ -220,50 +246,32 @@
                     })
                     .filter(n => n !== null);
                 
-                // If we are editing, we don't want to count the current villager against the sequence if the ID hasn't changed parts
-                // But for simplicity, we regenerate based on current form state.
-                // NOTE: Logic below handles "New" villagers.
-                
                 const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
                 return `${prefix}-${nextNum.toString().padStart(3, '0')}`;
             };
 
-            // Effect to auto-update ID when profession or trade code changes (Only for new villagers or if user hasn't manually overridden completely)
             useEffect(() => {
                 if (!editingId) {
-                    // Auto-generate for new entries
                     const generated = generateId(newVillager.type, tradeCode);
                     setNewVillager(prev => ({ ...prev, id: generated }));
-                } else {
-                    // For editing, only update if the user changes the profession or trade code explicitly?
-                    // For now, let's keep the ID static when editing unless we want a "Regenerate ID" button, 
-                    // or we can allow the ID to update if the constituent parts change.
-                    // To be safe and "simplify", let's update it but respect the original number if possible? 
-                    // No, "simplify" implies strict adherence to the system.
-                    
-                    // However, changing ID on edit is dangerous if links existed, but here it's fine.
-                    // Let's NOT auto-change ID on edit to avoid confusion, unless we provide a specific UI control.
-                    // Actually, the prompt says "assigning names...", which usually implies creation. 
-                    // We will stick to creation for auto-generation.
                 }
             }, [newVillager.type, tradeCode, villagers]);
 
 
             // --- Handlers ---
-
             const openNewVillagerForm = () => {
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
                 setTradeCode('');
                 setEditingId(null);
+                setEditingTradeIndex(null);
                 setIsFormOpen(true);
             };
 
             const handleEditClick = (villager) => {
                 setNewVillager({ ...villager });
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
                 
-                // Try to extract trade code from ID if it matches pattern
                 const parts = villager.id.split('-');
                 if (parts.length === 3) {
                     setTradeCode(parts[1]);
@@ -272,33 +280,78 @@
                 }
 
                 setEditingId(villager.id);
+                setEditingTradeIndex(null);
                 setIsFormOpen(true);
+            };
+
+            const toggleStar = (index) => {
+                const updatedTrades = newVillager.trades.map((t, i) => ({
+                    ...t,
+                    isStarred: i === index // Toggle behavior: Only one can be starred at a time? Or toggle? Let's make it select one.
+                }));
+                
+                // If we are "starring" a trade, generate the code from it
+                const targetTrade = updatedTrades[index];
+                if (targetTrade.isStarred) {
+                    const smartCode = generateSmartTag(targetTrade.item);
+                    setTradeCode(smartCode);
+                }
+
+                setNewVillager({ ...newVillager, trades: updatedTrades });
             };
 
             const handleAddTrade = (e) => {
                 e.preventDefault();
                 if (!tempTrade.item || !tempTrade.price) return;
                 
-                // Auto-set trade code from first trade if empty
-                if (!tradeCode && newVillager.trades.length === 0) {
-                    const suggestedCode = tempTrade.item.substring(0, 3).toUpperCase();
-                    setTradeCode(suggestedCode);
+                // Auto-set trade code from first trade if empty and no code set
+                let autoCode = null;
+                if (editingTradeIndex === null && !tradeCode && newVillager.trades.length === 0) {
+                    autoCode = generateSmartTag(tempTrade.item);
+                    setTradeCode(autoCode);
                 }
 
                 const tradeToAdd = { 
                     ...tempTrade,
-                    costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '' 
+                    costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '',
+                    // If it's the first trade being added and we just auto-generated a code, star it by default
+                    isStarred: autoCode ? true : false
                 };
 
-                setNewVillager({
-                    ...newVillager,
-                    trades: [...newVillager.trades, tradeToAdd]
-                });
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
+                if (editingTradeIndex !== null) {
+                    const updatedTrades = [...newVillager.trades];
+                    updatedTrades[editingTradeIndex] = tradeToAdd;
+                    setNewVillager({ ...newVillager, trades: updatedTrades });
+                    setEditingTradeIndex(null);
+                } else {
+                    setNewVillager({
+                        ...newVillager,
+                        trades: [...newVillager.trades, tradeToAdd]
+                    });
+                }
+                
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
                 document.getElementById('trade-item-input').focus();
             };
 
+            const handleEditTradeClick = (index) => {
+                setTempTrade(newVillager.trades[index]);
+                setEditingTradeIndex(index);
+                document.getElementById('trade-item-input').focus();
+            };
+
+            const handleCancelTradeEdit = () => {
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
+                setEditingTradeIndex(null);
+            };
+
             const removeTempTrade = (index) => {
+                if (editingTradeIndex === index) {
+                    handleCancelTradeEdit();
+                } else if (editingTradeIndex !== null && index < editingTradeIndex) {
+                    setEditingTradeIndex(editingTradeIndex - 1);
+                }
+
                 const updatedTrades = newVillager.trades.filter((_, i) => i !== index);
                 setNewVillager({ ...newVillager, trades: updatedTrades });
             };
@@ -310,34 +363,40 @@
                 if (tempTrade.item && tempTrade.price) {
                      const tradeToAdd = { 
                         ...tempTrade,
-                        costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '' 
+                        costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '',
+                        isStarred: !tradeCode && finalTrades.length === 0 // Auto-star if first
                     };
-                    finalTrades.push(tradeToAdd);
                     
-                    // Handle edge case where user adds trade via save button directly
-                    if (!tradeCode && finalTrades.length === 1) {
-                         // We can't easily set state and use it immediately here, 
-                         // but we can assume the ID logic needs this trade code.
-                         // For simplicity, we'll just save with what we have.
+                    if (editingTradeIndex !== null) {
+                        finalTrades[editingTradeIndex] = tradeToAdd;
+                    } else {
+                        finalTrades.push(tradeToAdd);
+                    }
+                    
+                     // Edge case: if we just added the very first trade via save, update code
+                    if (!tradeCode && finalTrades.length === 1 && editingTradeIndex === null) {
+                        // We can't setState inside here for the ID generation of *this* save
+                        // But we can update the local variables used for generation
+                        // However, ID generation is reactive to state. 
+                        // For simplicity, user might need to edit again to fix ID if they rush.
+                        // OR we force a code generation right here for the final ID:
+                        // But we'll rely on the user seeing the code box.
                     }
                 }
                 
-                // Final ID generation ensure consistency on save
-                // If editing, we keep the ID unless logic changes
                 const finalId = editingId ? newVillager.id : generateId(newVillager.type, tradeCode);
 
                 if (editingId) {
-                    // Update existing
                     setVillagers(villagers.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v));
                     setEditingId(null);
                 } else {
-                    // Create new
                     setVillagers([...villagers, { ...newVillager, id: finalId, trades: finalTrades, status: 'Active' }]);
                 }
                 
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false });
                 setTradeCode('');
+                setEditingTradeIndex(null);
                 setIsFormOpen(false);
             };
 
@@ -357,7 +416,6 @@
             };
 
             // --- Import / Export Handlers ---
-
             const handleExport = () => {
                 const data = {
                     villagers,
@@ -385,7 +443,6 @@
                 reader.onload = (event) => {
                     try {
                         const imported = JSON.parse(event.target.result);
-                        // Basic validation check
                         if (imported.villagers && Array.isArray(imported.villagers)) {
                             if (confirm(`Load ${imported.villagers.length} villagers from file? This will overwrite your current list.`)) {
                                 setVillagers(imported.villagers);
@@ -395,21 +452,18 @@
                                 alert("Data loaded successfully!");
                             }
                         } else if (Array.isArray(imported)) {
-                            // Legacy/Simple array support
                             if (confirm(`Load ${imported.length} villagers from file? This will overwrite your current list.`)) {
                                 setVillagers(imported);
                                 alert("Data loaded successfully!");
                             }
                         } else {
-                            alert("Invalid file format. Please upload a valid JSON export.");
+                            alert("Invalid file format.");
                         }
                     } catch (err) {
-                        alert("Error parsing file. Ensure it is a valid JSON file.");
-                        console.error(err);
+                        alert("Error parsing file.");
                     }
                 };
                 reader.readAsText(file);
-                // Reset input so same file can be selected again if needed
                 e.target.value = '';
             };
 
@@ -422,9 +476,22 @@
                         v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         v.notes.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         hasTradeMatch;
+                    
                     const matchesType = filterType === 'All' || v.type === filterType;
-                    const matchesTab = activeTab === 'current' ? v.status !== 'Terminated' : v.status === 'Terminated';
-                    return matchesSearch && matchesType && matchesTab;
+                    
+                    // Status Filter
+                    const matchesStatus = filterStatus === 'All' 
+                        ? true 
+                        : v.status === filterStatus;
+
+                    // Tab Filter (Buy vs Sell)
+                    const hasRelevantTrade = v.trades && v.trades.some(t => {
+                        return activeTab === 'buy' ? !t.isBuy : t.isBuy;
+                    });
+                    
+                    const tradeRelevance = (v.trades && v.trades.length > 0) ? hasRelevantTrade : true;
+
+                    return matchesSearch && matchesType && matchesStatus && tradeRelevance;
                 });
 
                 // 2. Sort
@@ -444,10 +511,9 @@
                         processed.reverse();
                         break;
                     case 'Oldest':
-                        // Default order
                         break;
                     default:
-                        processed.reverse(); // Default to Newest
+                        processed.reverse();
                 }
 
                 return processed;
@@ -455,11 +521,8 @@
 
             const filteredAndSortedVillagers = getProcessedVillagers();
 
-            // Validation Helper
             const getValidationIssues = (villager) => {
                 const issues = [];
-                // Check Pattern: PPP-TTT-### (e.g. LIB-MND-001)
-                // Allows for custom codes (3 chars) - (3 chars) - (3 digits)
                 if (!/^[A-Z]{3}-[A-Z0-9]{3}-\d{3}$/.test(villager.id)) {
                     issues.push("Invalid ID Format (Expected PPP-TTT-###)");
                 }
@@ -478,7 +541,6 @@
                 }
             };
 
-            // Calculated stats
             const recordedDeaths = villagers.filter(v => v.status === 'Terminated').length;
             const totalDeaths = recordedDeaths + manualDeaths;
 
@@ -501,27 +563,9 @@
                                     className="hidden" 
                                     accept=".json"
                                 />
-                                <button 
-                                    onClick={() => fileInputRef.current.click()}
-                                    className="bg-stone-700 hover:bg-stone-600 text-stone-300 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-stone-600 hover:text-white"
-                                    title="Import Data"
-                                >
-                                    <Upload size={20} />
-                                </button>
-                                <button 
-                                    onClick={handleExport}
-                                    className="bg-stone-700 hover:bg-stone-600 text-stone-300 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-stone-600 hover:text-white"
-                                    title="Export Data"
-                                >
-                                    <Download size={20} />
-                                </button>
-                                <button 
-                                    onClick={openNewVillagerForm}
-                                    className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/50"
-                                >
-                                    <Plus size={20} />
-                                    <span>Log Villager</span>
-                                </button>
+                                <button onClick={() => fileInputRef.current.click()} className="bg-stone-700 hover:bg-stone-600 text-stone-300 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-stone-600 hover:text-white" title="Import Data"><Upload size={20} /></button>
+                                <button onClick={handleExport} className="bg-stone-700 hover:bg-stone-600 text-stone-300 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-stone-600 hover:text-white" title="Export Data"><Download size={20} /></button>
+                                <button onClick={openNewVillagerForm} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-emerald-900/50"><Plus size={20} /><span>Log Villager</span></button>
                             </div>
                         </div>
 
@@ -536,7 +580,6 @@
                                 <div className="text-2xl font-bold text-blue-400">{villagers.filter(v => v.status === 'Active').length}</div>
                             </div>
                             
-                            {/* Terminated (Interactive) */}
                             <div className="bg-stone-800 p-3 rounded-lg border border-stone-700 relative group select-none">
                                 <div className="text-stone-400 text-xs uppercase tracking-wider flex justify-between">
                                     <span>Terminated</span>
@@ -544,27 +587,10 @@
                                 <div className="flex items-center justify-between">
                                     <div className="text-2xl font-bold text-red-400">{totalDeaths}</div>
                                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                            onClick={() => setManualDeaths(d => d + 1)}
-                                            className="bg-stone-700 hover:bg-stone-600 text-stone-300 w-5 h-5 flex items-center justify-center rounded hover:text-white transition-colors"
-                                            title="Add unrecorded death"
-                                        >
-                                            <Plus size={12} />
-                                        </button>
-                                        <button 
-                                            onClick={() => setManualDeaths(d => Math.max(0, d - 1))}
-                                            className="bg-stone-700 hover:bg-stone-600 text-stone-300 w-5 h-5 flex items-center justify-center rounded hover:text-white transition-colors"
-                                            title="Remove unrecorded death"
-                                        >
-                                            <Minus size={12} />
-                                        </button>
+                                        <button onClick={() => setManualDeaths(d => d + 1)} className="bg-stone-700 hover:bg-stone-600 text-stone-300 w-5 h-5 flex items-center justify-center rounded hover:text-white transition-colors" title="Add unrecorded death"><Plus size={12} /></button>
+                                        <button onClick={() => setManualDeaths(d => Math.max(0, d - 1))} className="bg-stone-700 hover:bg-stone-600 text-stone-300 w-5 h-5 flex items-center justify-center rounded hover:text-white transition-colors" title="Remove unrecorded death"><Minus size={12} /></button>
                                     </div>
                                 </div>
-                                {manualDeaths > 0 && (
-                                    <div className="text-[10px] text-stone-500 mt-1">
-                                        {recordedDeaths} records + {manualDeaths} misc
-                                    </div>
-                                )}
                             </div>
 
                             <div className="bg-stone-800 p-3 rounded-lg border border-stone-700">
@@ -573,41 +599,39 @@
                             </div>
                         </div>
 
-                        {/* Tabs */}
+                        {/* Tabs (Buy / Sell) */}
                         <div className="flex space-x-1 bg-stone-800 p-1 rounded-lg border border-stone-700">
                             <button 
-                                onClick={() => setActiveTab('current')}
+                                onClick={() => setActiveTab('buy')}
                                 className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-bold transition-all ${
-                                    activeTab === 'current' 
-                                        ? 'bg-stone-700 text-white shadow-md' 
+                                    activeTab === 'buy' 
+                                        ? 'bg-emerald-700 text-white shadow-md' 
                                         : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'
                                 }`}
                             >
-                                <Users size={16} />
-                                Current Villagers
+                                <ShoppingBag size={16} />
+                                Buy Items (Player Buys)
                             </button>
                             <button 
-                                onClick={() => setActiveTab('killed')}
+                                onClick={() => setActiveTab('sell')}
                                 className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-bold transition-all ${
-                                    activeTab === 'killed' 
-                                        ? 'bg-red-900/30 text-red-200 shadow-md border border-red-900/50' 
-                                        : 'text-stone-500 hover:text-red-300 hover:bg-stone-800'
+                                    activeTab === 'sell' 
+                                        ? 'bg-amber-700 text-white shadow-md' 
+                                        : 'text-stone-500 hover:text-stone-300 hover:bg-stone-800'
                                 }`}
                             >
-                                <Skull size={16} />
-                                Villagers Killed
+                                <Coins size={16} />
+                                Sell Items (Player Sells)
                             </button>
                         </div>
 
                         {/* Search, Filter & Sort */}
                         <div className="flex flex-col md:flex-row gap-4 bg-stone-800 p-4 rounded-lg border border-stone-700">
                             <div className="relative flex-1">
-                                <div className="absolute left-3 top-2.5 text-stone-500">
-                                    <Search size={20} />
-                                </div>
+                                <div className="absolute left-3 top-2.5 text-stone-500"><Search size={20} /></div>
                                 <input
                                     type="text"
-                                    placeholder={`Search items, IDs, or notes in ${activeTab === 'current' ? 'active' : 'graveyard'}...`}
+                                    placeholder={`Search trades in ${activeTab === 'buy' ? 'Buying' : 'Selling'}...`}
                                     className="w-full bg-stone-900 border border-stone-700 rounded-lg py-2 pl-10 pr-4 text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -615,6 +639,18 @@
                             </div>
                             
                             <div className="flex gap-2">
+                                {/* Status Filter */}
+                                <select 
+                                    className={`bg-stone-900 border border-stone-700 rounded-lg px-4 py-2 text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${filterStatus === 'Terminated' ? 'text-red-400 border-red-900' : ''}`}
+                                    value={filterStatus}
+                                    onChange={(e) => setFilterStatus(e.target.value)}
+                                    title="Filter by Status"
+                                >
+                                    <option value="Active">Status: Active</option>
+                                    <option value="Terminated">Status: Terminated</option>
+                                    <option value="All">Status: All</option>
+                                </select>
+
                                 <select 
                                     className="bg-stone-900 border border-stone-700 rounded-lg px-4 py-2 text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                                     value={filterType}
@@ -647,9 +683,7 @@
                                         <option value="ID_DESC">ID (Z-A)</option>
                                         <option value="Type">Type (A-Z)</option>
                                     </select>
-                                    <div className="absolute left-2.5 top-2.5 text-stone-500 pointer-events-none">
-                                        <ArrowUpDown size={14} />
-                                    </div>
+                                    <div className="absolute left-2.5 top-2.5 text-stone-500 pointer-events-none"><ArrowUpDown size={14} /></div>
                                 </div>
                             </div>
                         </div>
@@ -659,8 +693,8 @@
                             {filteredAndSortedVillagers.length === 0 ? (
                                 <div className="text-center py-12 text-stone-500 bg-stone-800/50 rounded-lg border border-stone-700 border-dashed">
                                     <div className="flex flex-col items-center gap-2">
-                                        <div className="opacity-50">{activeTab === 'current' ? <Users size={48} /> : <Skull size={48} />}</div>
-                                        <p>No {activeTab === 'current' ? 'active' : 'terminated'} villagers found.</p>
+                                        <div className="opacity-50"><Users size={48} /></div>
+                                        <p>No villagers found for this filter.</p>
                                     </div>
                                 </div>
                             ) : (
@@ -668,7 +702,6 @@
                                     const issues = getValidationIssues(villager);
                                     const hasIssues = issues.length > 0;
                                     
-                                    // Determine styling: Terminated > Warning > Standard
                                     let containerClasses = "group relative rounded-lg p-4 border transition-all ";
                                     if (villager.status === 'Terminated') {
                                         containerClasses += "border-red-900/50 bg-stone-900/30";
@@ -678,11 +711,11 @@
                                         containerClasses += "bg-stone-800 border-stone-700 hover:border-emerald-500/50";
                                     }
 
+                                    // Filter trades for display based on active tab
+                                    const visibleTrades = villager.trades ? villager.trades.filter(t => activeTab === 'buy' ? !t.isBuy : t.isBuy) : [];
+
                                     return (
-                                        <div 
-                                            key={villager.id} 
-                                            className={containerClasses}
-                                        >
+                                        <div key={villager.id} className={containerClasses}>
                                             <div className="flex flex-col md:flex-row justify-between gap-4">
                                                 {/* Left: ID & Main Info */}
                                                 <div className="flex-1">
@@ -694,7 +727,6 @@
                                                             {villager.status}
                                                         </span>
                                                         
-                                                        {/* Validation Warning Badge */}
                                                         {hasIssues && (
                                                             <div className="flex items-center gap-1 text-xs text-amber-500 font-bold px-2 py-1 rounded bg-amber-900/20 border border-amber-500/30 cursor-help" title={issues.join(', ')}>
                                                                 <AlertTriangle size={14} />
@@ -707,13 +739,15 @@
                                                         </span>
                                                     </div>
                                                     
-                                                    {/* Trades List */}
+                                                    {/* Trades List (Filtered) */}
                                                     <div className={`mb-4 rounded-md border p-2 ${villager.status === 'Terminated' ? 'bg-red-900/10 border-red-900/30' : 'bg-stone-900/50 border-stone-700/50'}`}>
                                                         <div className="text-xs text-stone-500 uppercase tracking-wider mb-2 font-semibold flex items-center gap-1">
-                                                            <Coins size={12} /> {villager.status === 'Terminated' ? 'Lost Trades' : 'Known Trades'}
+                                                            {activeTab === 'buy' ? <ShoppingBag size={12}/> : <Coins size={12} />} 
+                                                            {activeTab === 'buy' ? ' Buying From Villager' : ' Selling To Villager'}
                                                         </div>
+                                                        
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                            {villager.trades && villager.trades.map((t, idx) => {
+                                                            {visibleTrades.length > 0 ? visibleTrades.map((t, idx) => {
                                                                 const isTradeMatch = searchTerm && t.item.toLowerCase().includes(searchTerm.toLowerCase());
                                                                 return (
                                                                     <div key={idx} className={`flex justify-between items-center text-sm px-2 py-1 rounded border transition-colors
@@ -722,64 +756,53 @@
                                                                             : (villager.status === 'Terminated' ? 'bg-stone-900/50 border-stone-800 opacity-60' : 'bg-stone-800 border-stone-700')
                                                                         }
                                                                     `}>
-                                                                        <span className={isTradeMatch ? "text-emerald-100 font-bold" : "text-stone-200"}>
-                                                                            {t.item}
-                                                                        </span>
-                                                                        <div className="text-right">
-                                                                            <span className={`${villager.status === 'Terminated' ? 'text-red-400/70' : 'text-emerald-400'} font-mono block leading-none`}>
-                                                                                {t.price} <span className="text-[10px] opacity-70">EM</span>
-                                                                            </span>
-                                                                            {t.costItem && (
-                                                                                <span className="text-[10px] text-stone-500 block leading-tight mt-0.5">
-                                                                                    + {t.costQty || 1} {t.costItem}
+                                                                        {/* Display logic differs for Buy vs Sell */}
+                                                                        {t.isBuy ? (
+                                                                             // Sell: Item -> Emerald
+                                                                             <>
+                                                                                <span className={`flex items-center gap-1 ${isTradeMatch ? "text-amber-100 font-bold" : "text-stone-200"}`}>
+                                                                                    {t.isStarred && <Star size={10} fill="currentColor" className="text-yellow-500" />} {t.price} {t.item}
                                                                                 </span>
-                                                                            )}
-                                                                        </div>
+                                                                                <div className="flex items-center gap-1 text-emerald-400 font-mono">
+                                                                                    <ArrowRight size={12} /> 1 EM
+                                                                                </div>
+                                                                             </>
+                                                                        ) : (
+                                                                            // Buy: Emeralds -> Item
+                                                                            <>
+                                                                                <span className={`flex items-center gap-1 ${isTradeMatch ? "text-emerald-100 font-bold" : "text-stone-200"}`}>
+                                                                                    {t.isStarred && <Star size={10} fill="currentColor" className="text-yellow-500" />} {t.item}
+                                                                                </span>
+                                                                                <div className="text-right">
+                                                                                    <span className={`${villager.status === 'Terminated' ? 'text-red-400/70' : 'text-emerald-400'} font-mono block leading-none`}>
+                                                                                        {t.price} <span className="text-[10px] opacity-70">EM</span>
+                                                                                    </span>
+                                                                                    {t.costItem && (
+                                                                                        <span className="text-[10px] text-stone-500 block leading-tight mt-0.5">
+                                                                                            + {t.costQty || 1} {t.costItem}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </>
+                                                                        )}
                                                                     </div>
                                                                 );
-                                                            })}
-                                                            {(!villager.trades || villager.trades.length === 0) && (
-                                                                <span className="text-stone-600 text-sm italic">No trades recorded.</span>
+                                                            }) : (
+                                                                <span className="text-stone-600 text-sm italic col-span-2">No matching trades in this category.</span>
                                                             )}
                                                         </div>
                                                     </div>
 
                                                     <div className="flex items-center gap-4 text-sm text-stone-400 mt-2">
-                                                        <span className="flex items-center gap-1">
-                                                            <MapPin size={14} /> {villager.location || "Unknown Location"}
-                                                        </span>
+                                                        <span className="flex items-center gap-1"><MapPin size={14} /> {villager.location || "Unknown Location"}</span>
                                                     </div>
-
-                                                    {villager.notes && (
-                                                        <div className="mt-3 text-sm text-stone-500 italic border-l-2 border-stone-700 pl-3">
-                                                            "{villager.notes}"
-                                                        </div>
-                                                    )}
                                                 </div>
 
                                                 {/* Right: Actions */}
                                                 <div className="flex md:flex-col justify-end gap-2 md:border-l border-stone-700 md:pl-4">
-                                                    <button 
-                                                        onClick={() => handleEditClick(villager)}
-                                                        className="p-2 rounded hover:bg-stone-700 text-stone-400 hover:text-blue-400 transition-colors"
-                                                        title="Edit Villager"
-                                                    >
-                                                        <Pencil size={18} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => toggleStatus(villager.id)}
-                                                        className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-emerald-400' : 'text-stone-400 hover:text-yellow-400'}`}
-                                                        title={villager.status === 'Terminated' ? "Revive (Correction)" : "Mark as Terminated"}
-                                                    >
-                                                        {villager.status === 'Terminated' ? <Check size={18} /> : <Skull size={18} />}
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => deleteVillager(villager.id)}
-                                                        className="p-2 rounded hover:bg-red-900/30 text-stone-400 hover:text-red-400 transition-colors"
-                                                        title="Permanently Delete Record"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
+                                                    <button onClick={() => handleEditClick(villager)} className="p-2 rounded hover:bg-stone-700 text-stone-400 hover:text-blue-400 transition-colors" title="Edit Villager"><Pencil size={18} /></button>
+                                                    <button onClick={() => toggleStatus(villager.id)} className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-emerald-400' : 'text-stone-400 hover:text-yellow-400'}`} title={villager.status === 'Terminated' ? "Revive" : "Mark as Terminated"}>{villager.status === 'Terminated' ? <Check size={18} /> : <Skull size={18} />}</button>
+                                                    <button onClick={() => deleteVillager(villager.id)} className="p-2 rounded hover:bg-red-900/30 text-stone-400 hover:text-red-400 transition-colors" title="Delete"><Trash2 size={18} /></button>
                                                 </div>
                                             </div>
                                         </div>
@@ -793,32 +816,20 @@
                             <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
                                 <div className="bg-stone-800 rounded-xl border border-stone-600 w-full max-w-lg shadow-2xl my-8">
                                     <div className="flex justify-between items-center p-4 border-b border-stone-700 sticky top-0 bg-stone-800 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white">
-                                            {editingId ? 'Edit Villager' : 'Log New Villager'}
-                                        </h2>
-                                        <button onClick={() => setIsFormOpen(false)} className="text-stone-400 hover:text-white">
-                                            <X size={24} />
-                                        </button>
+                                        <h2 className="text-xl font-bold text-white">{editingId ? 'Edit Villager' : 'Log New Villager'}</h2>
+                                        <button onClick={() => setIsFormOpen(false)} className="text-stone-400 hover:text-white"><X size={24} /></button>
                                     </div>
                                     
                                     <form onSubmit={handleSaveVillager} className="p-4 space-y-4">
-                                        {/* Auto-Generated ID Display */}
+                                        {/* ID Display */}
                                         <div className="bg-stone-900/80 p-3 rounded-lg border border-emerald-500/30 flex items-center justify-between">
                                             <div className="flex flex-col">
                                                 <span className="text-[10px] uppercase text-stone-500 tracking-wider font-bold">Generated ID Tag</span>
-                                                <span className="font-mono text-2xl text-emerald-400 tracking-wider font-bold">
-                                                    {newVillager.id || '---'}
-                                                </span>
+                                                <span className="font-mono text-2xl text-emerald-400 tracking-wider font-bold">{newVillager.id || '---'}</span>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-[10px] text-stone-500 mb-1">Trade Tag (e.g. MND)</div>
-                                                <input 
-                                                    maxLength={3}
-                                                    placeholder="XXX"
-                                                    className="w-16 bg-stone-800 border border-stone-600 rounded p-1 text-center text-white focus:border-emerald-500 outline-none uppercase font-mono text-sm"
-                                                    value={tradeCode}
-                                                    onChange={e => setTradeCode(e.target.value.toUpperCase())}
-                                                />
+                                                <input maxLength={3} placeholder="XXX" className="w-16 bg-stone-800 border border-stone-600 rounded p-1 text-center text-white focus:border-emerald-500 outline-none uppercase font-mono text-sm" value={tradeCode} onChange={e => setTradeCode(e.target.value.toUpperCase())} />
                                             </div>
                                         </div>
 
@@ -826,45 +837,33 @@
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-xs uppercase text-stone-400 mb-1">Profession</label>
-                                                <select 
-                                                    className="w-full bg-stone-900 border border-stone-600 rounded p-2 text-white focus:border-emerald-500 outline-none"
-                                                    value={newVillager.type}
-                                                    onChange={e => setNewVillager({...newVillager, type: e.target.value})}
-                                                >
-                                                    <option>Librarian</option>
-                                                    <option>Fletcher</option>
-                                                    <option>Armorer</option>
-                                                    <option>Cleric</option>
-                                                    <option>Toolsmith</option>
-                                                    <option>Weaponsmith</option>
-                                                    <option>Farmer</option>
-                                                    <option>Mason</option>
-                                                    <option>Butcher</option>
-                                                    <option>Fisherman</option>
+                                                <select className="w-full bg-stone-900 border border-stone-600 rounded p-2 text-white focus:border-emerald-500 outline-none" value={newVillager.type} onChange={e => setNewVillager({...newVillager, type: e.target.value})}>
+                                                    <option>Librarian</option><option>Fletcher</option><option>Armorer</option><option>Cleric</option><option>Toolsmith</option><option>Weaponsmith</option><option>Farmer</option><option>Mason</option><option>Butcher</option><option>Fisherman</option>
                                                 </select>
                                             </div>
                                             <div>
                                                 <label className="block text-xs uppercase text-stone-400 mb-1">Location</label>
-                                                <input 
-                                                    placeholder="e.g. Hall A"
-                                                    className="w-full bg-stone-900 border border-stone-600 rounded p-2 text-white focus:border-emerald-500 outline-none"
-                                                    value={newVillager.location}
-                                                    onChange={e => setNewVillager({...newVillager, location: e.target.value})}
-                                                />
+                                                <input placeholder="e.g. Hall A" className="w-full bg-stone-900 border border-stone-600 rounded p-2 text-white focus:border-emerald-500 outline-none" value={newVillager.location} onChange={e => setNewVillager({...newVillager, location: e.target.value})} />
                                             </div>
                                         </div>
 
-                                        {/* Trade Input Section */}
+                                        {/* Trade Input */}
                                         <div className="bg-stone-900/50 p-3 rounded-lg border border-stone-700">
-                                            <label className="block text-xs uppercase text-emerald-400 mb-2 font-bold flex items-center gap-2">
-                                                <Coins size={14}/> Add Trades
-                                            </label>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="block text-xs uppercase text-emerald-400 font-bold flex items-center gap-2">
+                                                    <Coins size={14}/> {editingTradeIndex !== null ? 'Update Trade' : 'Add Trades'}
+                                                </label>
+                                                <div className="flex items-center gap-2 bg-stone-800 rounded p-1 border border-stone-600">
+                                                    <button type="button" onClick={() => setTempTrade({...tempTrade, isBuy: false})} className={`text-xs px-2 py-1 rounded transition-colors ${!tempTrade.isBuy ? 'bg-emerald-700 text-white' : 'text-stone-400 hover:text-white'}`}>Player Buys</button>
+                                                    <button type="button" onClick={() => setTempTrade({...tempTrade, isBuy: true})} className={`text-xs px-2 py-1 rounded transition-colors ${tempTrade.isBuy ? 'bg-amber-700 text-white' : 'text-stone-400 hover:text-white'}`}>Player Sells</button>
+                                                </div>
+                                            </div>
                                             
                                             <div className="flex flex-col gap-2">
                                                 <div className="flex gap-2">
                                                     <input 
                                                         id="trade-item-input"
-                                                        placeholder="Result Item (e.g. Mending)"
+                                                        placeholder={tempTrade.isBuy ? "Item to Sell (e.g. Paper)" : "Result Item (e.g. Mending)"}
                                                         className="flex-1 bg-stone-800 border border-stone-600 rounded p-2 text-white text-sm focus:border-emerald-500 outline-none"
                                                         value={tempTrade.item}
                                                         onChange={e => setTempTrade({...tempTrade, item: e.target.value})}
@@ -872,64 +871,63 @@
                                                     />
                                                     <input 
                                                         type="number"
-                                                        placeholder="Price"
-                                                        className="w-20 bg-stone-800 border border-stone-600 rounded p-2 text-white text-sm focus:border-emerald-500 outline-none"
+                                                        placeholder={tempTrade.isBuy ? "Qty" : "Cost (EM)"}
+                                                        className="w-24 bg-stone-800 border border-stone-600 rounded p-2 text-white text-sm focus:border-emerald-500 outline-none"
                                                         value={tempTrade.price}
                                                         onChange={e => setTempTrade({...tempTrade, price: e.target.value})}
                                                         onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
                                                     />
                                                 </div>
                                                 
-                                                {/* Secondary Cost Row */}
-                                                <div className="flex gap-2 items-center">
-                                                    <div className="flex-1 flex gap-2">
-                                                         <input 
-                                                            placeholder="Optional: Required Item (e.g. Book)"
-                                                            className="flex-1 bg-stone-800 border border-stone-700 rounded p-2 text-stone-300 text-xs focus:border-emerald-500 outline-none placeholder-stone-600"
-                                                            value={tempTrade.costItem || ''}
-                                                            onChange={e => setTempTrade({...tempTrade, costItem: e.target.value})}
-                                                            onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
-                                                        />
-                                                         <input 
-                                                            type="number"
-                                                            placeholder="Qty"
-                                                            className="w-16 bg-stone-800 border border-stone-700 rounded p-2 text-stone-300 text-xs focus:border-emerald-500 outline-none placeholder-stone-600"
-                                                            value={tempTrade.costQty || ''}
-                                                            onChange={e => setTempTrade({...tempTrade, costQty: e.target.value})}
-                                                            onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
-                                                        />
+                                                {!tempTrade.isBuy && (
+                                                    <div className="flex gap-2 items-center">
+                                                        <div className="flex-1 flex gap-2">
+                                                             <input placeholder="Optional: Required Item (e.g. Book)" className="flex-1 bg-stone-800 border border-stone-700 rounded p-2 text-stone-300 text-xs focus:border-emerald-500 outline-none placeholder-stone-600" value={tempTrade.costItem || ''} onChange={e => setTempTrade({...tempTrade, costItem: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                             <input type="number" placeholder="Qty" className="w-16 bg-stone-800 border border-stone-700 rounded p-2 text-stone-300 text-xs focus:border-emerald-500 outline-none placeholder-stone-600" value={tempTrade.costQty || ''} onChange={e => setTempTrade({...tempTrade, costQty: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                        </div>
+                                                        <button type="button" onClick={handleAddTrade} className="bg-stone-700 hover:bg-stone-600 text-emerald-400 p-2 rounded border border-stone-600 self-stretch flex items-center" title="Add Trade"><Plus size={20} /></button>
                                                     </div>
-                                                    <button 
-                                                        type="button"
-                                                        onClick={handleAddTrade}
-                                                        className="bg-stone-700 hover:bg-stone-600 text-emerald-400 p-2 rounded border border-stone-600 self-stretch flex items-center"
-                                                        title="Add Trade"
-                                                    >
-                                                        <Plus size={20} />
-                                                    </button>
-                                                </div>
+                                                )}
+                                                
+                                                {tempTrade.isBuy && (
+                                                    <button type="button" onClick={handleAddTrade} className="bg-stone-700 hover:bg-stone-600 text-amber-400 p-2 rounded border border-stone-600 w-full flex items-center justify-center gap-2 font-bold text-sm" title="Add Trade"><Plus size={16} /> Add Selling Trade</button>
+                                                )}
+
                                             </div>
 
                                             {/* List of added trades in modal */}
                                             {newVillager.trades.length > 0 && (
-                                                <div className="space-y-1 mt-3">
+                                                <div className="space-y-1 mt-3 border-t border-stone-700 pt-3">
                                                     {newVillager.trades.map((t, i) => (
-                                                        <div key={i} className="flex justify-between items-center bg-stone-800 px-3 py-1.5 rounded border border-stone-700 text-sm">
-                                                            <span className="text-stone-300">{t.item}</span>
+                                                        <div key={i} className={`flex justify-between items-center px-3 py-1.5 rounded border text-sm transition-colors ${editingTradeIndex === i ? 'bg-emerald-900/30 border-emerald-500/50 ring-1 ring-emerald-500/30' : 'bg-stone-800 border-stone-700'}`}>
+                                                            {t.isBuy ? (
+                                                                <span className={editingTradeIndex === i ? "text-amber-100" : "text-stone-300"}>Sell {t.price} {t.item}</span>
+                                                            ) : (
+                                                                <span className={editingTradeIndex === i ? "text-emerald-100" : "text-stone-300"}>Buy {t.item}</span>
+                                                            )}
+                                                            
                                                             <div className="flex items-center gap-3">
-                                                                <div className="text-right">
-                                                                    <div className="text-emerald-400">{t.price} Em</div>
-                                                                    {t.costItem && (
-                                                                        <div className="text-[10px] text-stone-500">+ {t.costQty} {t.costItem}</div>
-                                                                    )}
+                                                                {t.isBuy ? (
+                                                                    <span className="text-emerald-500 text-xs bg-emerald-900/20 px-1 rounded">Gets 1 EM</span>
+                                                                ) : (
+                                                                    <div className="text-right">
+                                                                        <div className="text-emerald-400">{t.price} Em</div>
+                                                                        {t.costItem && <div className="text-[10px] text-stone-500">+ {t.costQty} {t.costItem}</div>}
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex gap-1 items-center">
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={() => toggleStar(i)} 
+                                                                        className={`hover:scale-110 transition-transform ${t.isStarred ? 'text-yellow-400' : 'text-stone-600 hover:text-yellow-400'}`}
+                                                                        title="Star Trade (Sets ID Tag)"
+                                                                    >
+                                                                        <Star size={16} fill={t.isStarred ? "currentColor" : "none"} />
+                                                                    </button>
+                                                                    <div className="w-px h-3 bg-stone-700 mx-1"></div>
+                                                                    <button type="button" onClick={() => handleEditTradeClick(i)} className="text-stone-500 hover:text-blue-400"><Pencil size={14} /></button>
+                                                                    <button type="button" onClick={() => removeTempTrade(i)} className="text-stone-500 hover:text-red-400"><X size={14} /></button>
                                                                 </div>
-                                                                <button 
-                                                                    type="button" 
-                                                                    onClick={() => removeTempTrade(i)}
-                                                                    className="text-stone-500 hover:text-red-400"
-                                                                >
-                                                                    <X size={14} />
-                                                                </button>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -939,18 +937,10 @@
 
                                         <div>
                                             <label className="block text-xs uppercase text-stone-400 mb-1">Notes</label>
-                                            <textarea 
-                                                placeholder="Additional info..."
-                                                className="w-full bg-stone-900 border border-stone-600 rounded p-2 text-white focus:border-emerald-500 outline-none h-16"
-                                                value={newVillager.notes}
-                                                onChange={e => setNewVillager({...newVillager, notes: e.target.value})}
-                                            />
+                                            <textarea placeholder="Additional info..." className="w-full bg-stone-900 border border-stone-600 rounded p-2 text-white focus:border-emerald-500 outline-none h-16" value={newVillager.notes} onChange={e => setNewVillager({...newVillager, notes: e.target.value})} />
                                         </div>
 
-                                        <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2">
-                                            <Save size={18} />
-                                            {editingId ? 'Update Villager' : 'Save to Catalogue'}
-                                        </button>
+                                        <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2"><Save size={18} />{editingId ? 'Update Villager' : 'Save to Catalogue'}</button>
                                     </form>
                                 </div>
                             </div>
