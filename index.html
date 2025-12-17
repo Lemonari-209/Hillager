@@ -109,6 +109,9 @@
         const Upload = (props) => (
             <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></IconBase>
         );
+        const AlertTriangle = (props) => (
+            <IconBase {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase>
+        );
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
@@ -116,7 +119,7 @@
                 { 
                     id: 'LIB-MND-001', 
                     type: 'Librarian', 
-                    trades: [{ item: 'Mending', price: 10 }, { item: 'Paper', price: 24, isBuy: true }], 
+                    trades: [{ item: 'Mending', price: 10, costItem: 'Book', costQty: 1 }, { item: 'Paper', price: 24, isBuy: true }], 
                     location: 'Enchanted Hall', 
                     status: 'Active', 
                     notes: 'First mending villager' 
@@ -171,7 +174,7 @@
             // State for the simplified naming system
             const [tradeCode, setTradeCode] = useState('');
 
-            const [tempTrade, setTempTrade] = useState({ item: '', price: '' });
+            const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '' });
             
             const fileInputRef = useRef(null);
 
@@ -250,7 +253,7 @@
 
             const openNewVillagerForm = () => {
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
-                setTempTrade({ item: '', price: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
                 setTradeCode('');
                 setEditingId(null);
                 setIsFormOpen(true);
@@ -258,7 +261,7 @@
 
             const handleEditClick = (villager) => {
                 setNewVillager({ ...villager });
-                setTempTrade({ item: '', price: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
                 
                 // Try to extract trade code from ID if it matches pattern
                 const parts = villager.id.split('-');
@@ -282,11 +285,16 @@
                     setTradeCode(suggestedCode);
                 }
 
+                const tradeToAdd = { 
+                    ...tempTrade,
+                    costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '' 
+                };
+
                 setNewVillager({
                     ...newVillager,
-                    trades: [...newVillager.trades, { ...tempTrade }]
+                    trades: [...newVillager.trades, tradeToAdd]
                 });
-                setTempTrade({ item: '', price: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
                 document.getElementById('trade-item-input').focus();
             };
 
@@ -300,7 +308,12 @@
                 
                 let finalTrades = [...newVillager.trades];
                 if (tempTrade.item && tempTrade.price) {
-                    finalTrades.push(tempTrade);
+                     const tradeToAdd = { 
+                        ...tempTrade,
+                        costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '' 
+                    };
+                    finalTrades.push(tradeToAdd);
+                    
                     // Handle edge case where user adds trade via save button directly
                     if (!tradeCode && finalTrades.length === 1) {
                          // We can't easily set state and use it immediately here, 
@@ -323,7 +336,7 @@
                 }
                 
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
-                setTempTrade({ item: '', price: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '' });
                 setTradeCode('');
                 setIsFormOpen(false);
             };
@@ -441,6 +454,20 @@
             };
 
             const filteredAndSortedVillagers = getProcessedVillagers();
+
+            // Validation Helper
+            const getValidationIssues = (villager) => {
+                const issues = [];
+                // Check Pattern: PPP-TTT-### (e.g. LIB-MND-001)
+                // Allows for custom codes (3 chars) - (3 chars) - (3 digits)
+                if (!/^[A-Z]{3}-[A-Z0-9]{3}-\d{3}$/.test(villager.id)) {
+                    issues.push("Invalid ID Format (Expected PPP-TTT-###)");
+                }
+                if (!villager.trades || villager.trades.length === 0) {
+                    issues.push("No Trades Assigned");
+                }
+                return issues;
+            };
 
             const getStatusColor = (status) => {
                 switch(status) {
@@ -637,100 +664,127 @@
                                     </div>
                                 </div>
                             ) : (
-                                filteredAndSortedVillagers.map((villager) => (
-                                    <div 
-                                        key={villager.id} 
-                                        className={`group relative bg-stone-800 rounded-lg p-4 border transition-all ${
-                                            villager.status === 'Terminated' 
-                                                ? 'border-red-900/50 bg-stone-900/30' 
-                                                : 'border-stone-700 hover:border-emerald-500/50'
-                                        }`}
-                                    >
-                                        <div className="flex flex-col md:flex-row justify-between gap-4">
-                                            {/* Left: ID & Main Info */}
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-3">
-                                                    <span className={`font-mono text-lg font-bold px-2 py-1 rounded border ${villager.status === 'Terminated' ? 'text-red-400 bg-red-900/20 border-red-900/50' : 'text-emerald-300 bg-stone-900 border-stone-700'}`}>
-                                                        {villager.id}
-                                                    </span>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${getStatusColor(villager.status)}`}>
-                                                        {villager.status}
-                                                    </span>
-                                                    <span className="flex items-center gap-1 text-sm text-stone-400 ml-2">
-                                                        <Tag size={14} /> {villager.type}
-                                                    </span>
-                                                </div>
-                                                
-                                                {/* Trades List */}
-                                                <div className={`mb-4 rounded-md border p-2 ${villager.status === 'Terminated' ? 'bg-red-900/10 border-red-900/30' : 'bg-stone-900/50 border-stone-700/50'}`}>
-                                                    <div className="text-xs text-stone-500 uppercase tracking-wider mb-2 font-semibold flex items-center gap-1">
-                                                        <Coins size={12} /> {villager.status === 'Terminated' ? 'Lost Trades' : 'Known Trades'}
-                                                    </div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {villager.trades && villager.trades.map((t, idx) => {
-                                                            const isTradeMatch = searchTerm && t.item.toLowerCase().includes(searchTerm.toLowerCase());
-                                                            return (
-                                                                <div key={idx} className={`flex justify-between items-center text-sm px-2 py-1 rounded border transition-colors
-                                                                    ${isTradeMatch 
-                                                                        ? 'bg-emerald-900/40 border-emerald-500 ring-1 ring-emerald-500/50' 
-                                                                        : (villager.status === 'Terminated' ? 'bg-stone-900/50 border-stone-800 opacity-60' : 'bg-stone-800 border-stone-700')
-                                                                    }
-                                                                `}>
-                                                                    <span className={isTradeMatch ? "text-emerald-100 font-bold" : "text-stone-200"}>
-                                                                        {t.item}
-                                                                    </span>
-                                                                    <span className={`${villager.status === 'Terminated' ? 'text-red-400/70' : 'text-emerald-400'} font-mono`}>
-                                                                        {t.price} <span className="text-[10px] opacity-70">EM</span>
-                                                                    </span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                        {(!villager.trades || villager.trades.length === 0) && (
-                                                            <span className="text-stone-600 text-sm italic">No trades recorded.</span>
+                                filteredAndSortedVillagers.map((villager) => {
+                                    const issues = getValidationIssues(villager);
+                                    const hasIssues = issues.length > 0;
+                                    
+                                    // Determine styling: Terminated > Warning > Standard
+                                    let containerClasses = "group relative rounded-lg p-4 border transition-all ";
+                                    if (villager.status === 'Terminated') {
+                                        containerClasses += "border-red-900/50 bg-stone-900/30";
+                                    } else if (hasIssues) {
+                                        containerClasses += "border-amber-500/50 bg-amber-900/10 hover:border-amber-400";
+                                    } else {
+                                        containerClasses += "bg-stone-800 border-stone-700 hover:border-emerald-500/50";
+                                    }
+
+                                    return (
+                                        <div 
+                                            key={villager.id} 
+                                            className={containerClasses}
+                                        >
+                                            <div className="flex flex-col md:flex-row justify-between gap-4">
+                                                {/* Left: ID & Main Info */}
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <span className={`font-mono text-lg font-bold px-2 py-1 rounded border ${villager.status === 'Terminated' ? 'text-red-400 bg-red-900/20 border-red-900/50' : 'text-emerald-300 bg-stone-900 border-stone-700'}`}>
+                                                            {villager.id}
+                                                        </span>
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${getStatusColor(villager.status)}`}>
+                                                            {villager.status}
+                                                        </span>
+                                                        
+                                                        {/* Validation Warning Badge */}
+                                                        {hasIssues && (
+                                                            <div className="flex items-center gap-1 text-xs text-amber-500 font-bold px-2 py-1 rounded bg-amber-900/20 border border-amber-500/30 cursor-help" title={issues.join(', ')}>
+                                                                <AlertTriangle size={14} />
+                                                                <span className="hidden sm:inline">Correction Needed</span>
+                                                            </div>
                                                         )}
+
+                                                        <span className="flex items-center gap-1 text-sm text-stone-400 ml-2">
+                                                            <Tag size={14} /> {villager.type}
+                                                        </span>
                                                     </div>
+                                                    
+                                                    {/* Trades List */}
+                                                    <div className={`mb-4 rounded-md border p-2 ${villager.status === 'Terminated' ? 'bg-red-900/10 border-red-900/30' : 'bg-stone-900/50 border-stone-700/50'}`}>
+                                                        <div className="text-xs text-stone-500 uppercase tracking-wider mb-2 font-semibold flex items-center gap-1">
+                                                            <Coins size={12} /> {villager.status === 'Terminated' ? 'Lost Trades' : 'Known Trades'}
+                                                        </div>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {villager.trades && villager.trades.map((t, idx) => {
+                                                                const isTradeMatch = searchTerm && t.item.toLowerCase().includes(searchTerm.toLowerCase());
+                                                                return (
+                                                                    <div key={idx} className={`flex justify-between items-center text-sm px-2 py-1 rounded border transition-colors
+                                                                        ${isTradeMatch 
+                                                                            ? 'bg-emerald-900/40 border-emerald-500 ring-1 ring-emerald-500/50' 
+                                                                            : (villager.status === 'Terminated' ? 'bg-stone-900/50 border-stone-800 opacity-60' : 'bg-stone-800 border-stone-700')
+                                                                        }
+                                                                    `}>
+                                                                        <span className={isTradeMatch ? "text-emerald-100 font-bold" : "text-stone-200"}>
+                                                                            {t.item}
+                                                                        </span>
+                                                                        <div className="text-right">
+                                                                            <span className={`${villager.status === 'Terminated' ? 'text-red-400/70' : 'text-emerald-400'} font-mono block leading-none`}>
+                                                                                {t.price} <span className="text-[10px] opacity-70">EM</span>
+                                                                            </span>
+                                                                            {t.costItem && (
+                                                                                <span className="text-[10px] text-stone-500 block leading-tight mt-0.5">
+                                                                                    + {t.costQty || 1} {t.costItem}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {(!villager.trades || villager.trades.length === 0) && (
+                                                                <span className="text-stone-600 text-sm italic">No trades recorded.</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-4 text-sm text-stone-400 mt-2">
+                                                        <span className="flex items-center gap-1">
+                                                            <MapPin size={14} /> {villager.location || "Unknown Location"}
+                                                        </span>
+                                                    </div>
+
+                                                    {villager.notes && (
+                                                        <div className="mt-3 text-sm text-stone-500 italic border-l-2 border-stone-700 pl-3">
+                                                            "{villager.notes}"
+                                                        </div>
+                                                    )}
                                                 </div>
 
-                                                <div className="flex items-center gap-4 text-sm text-stone-400 mt-2">
-                                                    <span className="flex items-center gap-1">
-                                                        <MapPin size={14} /> {villager.location || "Unknown Location"}
-                                                    </span>
+                                                {/* Right: Actions */}
+                                                <div className="flex md:flex-col justify-end gap-2 md:border-l border-stone-700 md:pl-4">
+                                                    <button 
+                                                        onClick={() => handleEditClick(villager)}
+                                                        className="p-2 rounded hover:bg-stone-700 text-stone-400 hover:text-blue-400 transition-colors"
+                                                        title="Edit Villager"
+                                                    >
+                                                        <Pencil size={18} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => toggleStatus(villager.id)}
+                                                        className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-emerald-400' : 'text-stone-400 hover:text-yellow-400'}`}
+                                                        title={villager.status === 'Terminated' ? "Revive (Correction)" : "Mark as Terminated"}
+                                                    >
+                                                        {villager.status === 'Terminated' ? <Check size={18} /> : <Skull size={18} />}
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => deleteVillager(villager.id)}
+                                                        className="p-2 rounded hover:bg-red-900/30 text-stone-400 hover:text-red-400 transition-colors"
+                                                        title="Permanently Delete Record"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
                                                 </div>
-
-                                                {villager.notes && (
-                                                    <div className="mt-3 text-sm text-stone-500 italic border-l-2 border-stone-700 pl-3">
-                                                        "{villager.notes}"
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Right: Actions */}
-                                            <div className="flex md:flex-col justify-end gap-2 md:border-l border-stone-700 md:pl-4">
-                                                <button 
-                                                    onClick={() => handleEditClick(villager)}
-                                                    className="p-2 rounded hover:bg-stone-700 text-stone-400 hover:text-blue-400 transition-colors"
-                                                    title="Edit Villager"
-                                                >
-                                                    <Pencil size={18} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => toggleStatus(villager.id)}
-                                                    className={`p-2 rounded hover:bg-stone-700 transition-colors ${villager.status === 'Terminated' ? 'text-emerald-400' : 'text-stone-400 hover:text-yellow-400'}`}
-                                                    title={villager.status === 'Terminated' ? "Revive (Correction)" : "Mark as Terminated"}
-                                                >
-                                                    {villager.status === 'Terminated' ? <Check size={18} /> : <Skull size={18} />}
-                                                </button>
-                                                <button 
-                                                    onClick={() => deleteVillager(villager.id)}
-                                                    className="p-2 rounded hover:bg-red-900/30 text-stone-400 hover:text-red-400 transition-colors"
-                                                    title="Permanently Delete Record"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
 
@@ -806,30 +860,54 @@
                                                 <Coins size={14}/> Add Trades
                                             </label>
                                             
-                                            <div className="flex gap-2 mb-2">
-                                                <input 
-                                                    id="trade-item-input"
-                                                    placeholder="Item (e.g. Mending)"
-                                                    className="flex-1 bg-stone-800 border border-stone-600 rounded p-2 text-white text-sm focus:border-emerald-500 outline-none"
-                                                    value={tempTrade.item}
-                                                    onChange={e => setTempTrade({...tempTrade, item: e.target.value})}
-                                                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
-                                                />
-                                                <input 
-                                                    type="number"
-                                                    placeholder="Price"
-                                                    className="w-20 bg-stone-800 border border-stone-600 rounded p-2 text-white text-sm focus:border-emerald-500 outline-none"
-                                                    value={tempTrade.price}
-                                                    onChange={e => setTempTrade({...tempTrade, price: e.target.value})}
-                                                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
-                                                />
-                                                <button 
-                                                    type="button"
-                                                    onClick={handleAddTrade}
-                                                    className="bg-stone-700 hover:bg-stone-600 text-emerald-400 p-2 rounded border border-stone-600"
-                                                >
-                                                    <Plus size={20} />
-                                                </button>
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex gap-2">
+                                                    <input 
+                                                        id="trade-item-input"
+                                                        placeholder="Result Item (e.g. Mending)"
+                                                        className="flex-1 bg-stone-800 border border-stone-600 rounded p-2 text-white text-sm focus:border-emerald-500 outline-none"
+                                                        value={tempTrade.item}
+                                                        onChange={e => setTempTrade({...tempTrade, item: e.target.value})}
+                                                        onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
+                                                    />
+                                                    <input 
+                                                        type="number"
+                                                        placeholder="Price"
+                                                        className="w-20 bg-stone-800 border border-stone-600 rounded p-2 text-white text-sm focus:border-emerald-500 outline-none"
+                                                        value={tempTrade.price}
+                                                        onChange={e => setTempTrade({...tempTrade, price: e.target.value})}
+                                                        onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
+                                                    />
+                                                </div>
+                                                
+                                                {/* Secondary Cost Row */}
+                                                <div className="flex gap-2 items-center">
+                                                    <div className="flex-1 flex gap-2">
+                                                         <input 
+                                                            placeholder="Optional: Required Item (e.g. Book)"
+                                                            className="flex-1 bg-stone-800 border border-stone-700 rounded p-2 text-stone-300 text-xs focus:border-emerald-500 outline-none placeholder-stone-600"
+                                                            value={tempTrade.costItem || ''}
+                                                            onChange={e => setTempTrade({...tempTrade, costItem: e.target.value})}
+                                                            onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
+                                                        />
+                                                         <input 
+                                                            type="number"
+                                                            placeholder="Qty"
+                                                            className="w-16 bg-stone-800 border border-stone-700 rounded p-2 text-stone-300 text-xs focus:border-emerald-500 outline-none placeholder-stone-600"
+                                                            value={tempTrade.costQty || ''}
+                                                            onChange={e => setTempTrade({...tempTrade, costQty: e.target.value})}
+                                                            onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
+                                                        />
+                                                    </div>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={handleAddTrade}
+                                                        className="bg-stone-700 hover:bg-stone-600 text-emerald-400 p-2 rounded border border-stone-600 self-stretch flex items-center"
+                                                        title="Add Trade"
+                                                    >
+                                                        <Plus size={20} />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* List of added trades in modal */}
@@ -839,7 +917,12 @@
                                                         <div key={i} className="flex justify-between items-center bg-stone-800 px-3 py-1.5 rounded border border-stone-700 text-sm">
                                                             <span className="text-stone-300">{t.item}</span>
                                                             <div className="flex items-center gap-3">
-                                                                <span className="text-emerald-400">{t.price} Em</span>
+                                                                <div className="text-right">
+                                                                    <div className="text-emerald-400">{t.price} Em</div>
+                                                                    {t.costItem && (
+                                                                        <div className="text-[10px] text-stone-500">+ {t.costQty} {t.costItem}</div>
+                                                                    )}
+                                                                </div>
                                                                 <button 
                                                                     type="button" 
                                                                     onClick={() => removeTempTrade(i)}
