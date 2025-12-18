@@ -273,7 +273,6 @@
                         v.trades.forEach(t => {
                             const p = parseInt(t.price);
                             if (!isNaN(p)) {
-                                // For both buy (cost) and sell (qty needed), lower number is better
                                 if (prices[t.item] === undefined || p < prices[t.item]) {
                                     prices[t.item] = p;
                                 }
@@ -347,6 +346,15 @@
                 const lowerText = cleanText.toLowerCase();
                 const overrideKey = Object.keys(tagOverrides).find(k => k.toLowerCase() === lowerText);
                 if (overrideKey) return tagOverrides[overrideKey];
+                
+                const genericMap = {
+                    'shovel': 'SVL', 'pickaxe': 'PCK', 'axe': 'AXE', 'hoe': 'HOE', 'sword': 'SWD',
+                    'helmet': 'HLM', 'chestplate': 'CPL', 'leggings': 'LEG', 'boots': 'BTS', 'fishing rod': 'ROD'
+                };
+                for (const [key, code] of Object.entries(genericMap)) {
+                    if (lowerText.includes(key)) return code;
+                }
+
                 const firstChar = cleanText.charAt(0);
                 const rest = cleanText.slice(1).replace(/[aeiou]/gi, '');
                 const combined = firstChar + rest;
@@ -483,12 +491,26 @@
                 
                 const finalId = editingId ? newVillager.id : generateId(newVillager.type, tradeCode);
 
+                let updatedList = [...villagers];
+
+                // If forceIdNumber is active (Vacancy fill), remove the OLD terminated villager with that number
+                if (forceIdNumber !== null && !editingId) {
+                    updatedList = updatedList.filter(v => {
+                        const match = v.id.match(/-(\d{3})$/);
+                        const num = match ? parseInt(match[1], 10) : null;
+                        // Remove if number matches AND it's terminated (cleanup)
+                        return !(num === forceIdNumber && v.status === 'Terminated');
+                    });
+                }
+
                 if (editingId) {
-                    setVillagers(villagers.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v));
+                    updatedList = updatedList.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v);
+                    setVillagers(updatedList);
                     setEditingId(null);
                     showToast("Villager updated successfully!");
                 } else {
-                    setVillagers([...villagers, { ...newVillager, id: finalId, trades: finalTrades, status: 'Active' }]);
+                    updatedList.push({ ...newVillager, id: finalId, trades: finalTrades, status: 'Active' });
+                    setVillagers(updatedList);
                     showToast("New villager catalogued!");
                 }
                 
@@ -623,29 +645,21 @@
                 }
             };
 
-            // Calculate Totals for Cart
             const cartTotals = cart.reduce((acc, item) => {
                 const totalCost = item.price * item.qty;
                 if (!item.isBuy) {
-                    // Player Buying (Cost = Emeralds)
                     acc.emeraldsNeeded += totalCost;
-                    if (item.costItem) {
-                        acc.itemsNeeded.push({ name: item.costItem, qty: (item.costQty || 1) * item.qty });
-                    }
+                    if (item.costItem) acc.itemsNeeded.push({ name: item.costItem, qty: (item.costQty || 1) * item.qty });
                 } else {
-                    // Player Selling (Cost = Items)
                     acc.sellingItems.push({ name: item.item, qty: item.price * item.qty });
-                    acc.emeraldsGained += item.qty; // Assuming 1 emerald per trade batch
+                    acc.emeraldsGained += item.qty;
                 }
                 return acc;
             }, { emeraldsNeeded: 0, emeraldsGained: 0, itemsNeeded: [], sellingItems: [] });
 
-            // Consolidate Items
             const consolidateItems = (arr) => {
                 const map = {};
-                arr.forEach(i => {
-                    map[i.name] = (map[i.name] || 0) + i.qty;
-                });
+                arr.forEach(i => { map[i.name] = (map[i.name] || 0) + i.qty; });
                 return Object.entries(map).map(([name, qty]) => ({ name, qty }));
             };
 
@@ -1095,6 +1109,11 @@
                                                     <span className="font-mono text-2xl text-purple-400 tracking-wider font-bold">{newVillager.id || '---'}</span>
                                                     <button type="button" onClick={handleRegenerateId} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-purple-400 rounded transition-colors border border-neutral-600" title="Regenerate ID"><RefreshCw size={16} /></button>
                                                 </div>
+                                                {forceIdNumber !== null && !editingId && (
+                                                    <span className="text-xs text-orange-400 flex items-center gap-1 mt-1 animate-pulse">
+                                                        <AlertTriangle size={12}/> Filling Vacancy #{forceIdNumber.toString().padStart(3, '0')}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-[10px] text-neutral-500 mb-1">Trade Tag (e.g. MND)</div>
