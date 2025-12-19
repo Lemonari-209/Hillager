@@ -153,6 +153,25 @@
             <IconBase {...props}><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></IconBase>
         );
 
+        // --- Helper Component: Segmented ID Badge ---
+        const IdBadge = ({ id, status }) => {
+            const parts = id.split('-');
+            const isTerminated = status === 'Terminated';
+            
+            // Fallback for non-standard IDs
+            if (parts.length !== 3) {
+                return <span className={`font-mono text-lg font-bold px-2 py-1 ${isTerminated ? 'text-red-400' : 'text-purple-300'}`}>{id}</span>;
+            }
+
+            return (
+                <div className={`flex font-mono text-sm font-bold select-none ${isTerminated ? 'opacity-70' : ''}`}>
+                    <span className="bg-neutral-800 text-neutral-400 px-1.5 py-1 border-r border-neutral-700">{parts[0]}</span>
+                    <span className={`px-1.5 py-1 border-r border-neutral-700 ${isTerminated ? 'bg-red-900/20 text-red-400' : 'bg-neutral-700 text-neutral-200'}`}>{parts[1]}</span>
+                    <span className={`px-1.5 py-1 ${isTerminated ? 'bg-red-900/40 text-red-300' : 'bg-purple-900/40 text-purple-300'}`}>{parts[2]}</span>
+                </div>
+            );
+        };
+
         // --- Main Application ---
         const VillagerCatalogue = () => {
             const initialVillagers = [
@@ -211,7 +230,7 @@
             const [isVacancyOpen, setIsVacancyOpen] = useState(false);
             const [isGuideOpen, setIsGuideOpen] = useState(false);
             const [isCartOpen, setIsCartOpen] = useState(false);
-            const [isIdPickerOpen, setIsIdPickerOpen] = useState(false); // New state for ID picker
+            const [isIdPickerOpen, setIsIdPickerOpen] = useState(false); 
             
             const [editingId, setEditingId] = useState(null); 
             const [cart, setCart] = useState([]);
@@ -337,21 +356,39 @@
                 });
             };
 
+            // --- Smart Tag Generator & ID Logic ---
             const generateSmartTag = (text) => {
                 if (!text) return 'XXX';
                 const cleanText = text.replace(/\s+(?:X|IX|VI{0,3}|IV|I{1,3})$/i, '').trim();
                 const lowerText = cleanText.toLowerCase();
+                
+                // 1. Check Overrides
                 const overrideKey = Object.keys(tagOverrides).find(k => k.toLowerCase() === lowerText);
                 if (overrideKey) return tagOverrides[overrideKey];
                 
+                // 2. Check Generic Map
                 const genericMap = {
                     'shovel': 'SVL', 'pickaxe': 'PCK', 'axe': 'AXE', 'hoe': 'HOE', 'sword': 'SWD',
-                    'helmet': 'HLM', 'chestplate': 'CPL', 'leggings': 'LEG', 'boots': 'BTS', 'fishing rod': 'ROD'
+                    'helmet': 'HLM', 'chestplate': 'CPL', 'leggings': 'LEG', 'boots': 'BTS', 'fishing rod': 'ROD',
+                    'book': 'BOK', 'potion': 'POT', 'arrow': 'ARR'
                 };
                 for (const [key, code] of Object.entries(genericMap)) {
                     if (lowerText.includes(key)) return code;
                 }
 
+                // 3. Multi-word Acronym (New Logic: "Golden Carrot" -> "GLD")
+                const words = cleanText.split(' ');
+                if (words.length > 1) {
+                    let acronym = words.map(w => w[0]).join('').toUpperCase();
+                    if (acronym.length === 2) {
+                        const lastWord = words[1].replace(/[aeiou]/gi, '');
+                        if (lastWord.length > 1) acronym += lastWord[1].toUpperCase();
+                        else acronym += 'X';
+                    }
+                    if (acronym.length >= 3) return acronym.substring(0, 3);
+                }
+
+                // 4. Default Vowel Strip
                 const firstChar = cleanText.charAt(0);
                 const rest = cleanText.slice(1).replace(/[aeiou]/gi, '');
                 const combined = firstChar + rest;
@@ -359,30 +396,15 @@
                 return code.substring(0, 3).toUpperCase();
             };
 
-            // Vacancy Calc
-            const getVacancyData = () => {
-                const activeIds = new Set();
-                const terminatedIds = new Set();
-                let maxNum = 0;
-
-                villagers.forEach(v => {
-                    const match = v.id.match(/-(\d{3})$/);
-                    if (match) {
-                        const num = parseInt(match[1], 10);
-                        if (num > maxNum) maxNum = num;
-                        if (v.status === 'Active') activeIds.add(num);
-                        else terminatedIds.add(num);
-                    }
-                });
-
-                const grid = [];
-                for (let i = 1; i <= maxNum; i++) {
-                    let status = 'empty';
-                    if (activeIds.has(i)) status = 'active';
-                    else if (terminatedIds.has(i)) status = 'terminated';
-                    grid.push({ num: i, status });
-                }
-                return grid;
+            const getPrefix = (profession, tradeTag) => {
+                if (!profession) return 'XXX-XXX';
+                const professionMap = {
+                    'Farmer': 'FRM', 'Cleric': 'CLE', 'Toolsmith': 'TSM', 'Weaponsmith': 'WSM',
+                    'Armorer': 'ARM', 'Fletcher': 'FLE', 'Librarian': 'LIB', 'Fisherman': 'FSH', 'Shepherd': 'SHP'
+                };
+                const profCode = professionMap[profession] || profession.substring(0, 3).toUpperCase();
+                const tCode = (tradeTag && tradeTag.length >= 2) ? tradeTag.substring(0, 3).toUpperCase() : 'XXX';
+                return `${profCode}-${tCode}`;
             };
 
             // Calculate Max ID + 1 for new entries
@@ -398,20 +420,19 @@
                 return maxNum + 1;
             };
 
-            const generateId = (profession, tradeTag, excludeId = null) => {
+            const generateId = (profession, tradeTag, excludeId = null, specificNum = null) => {
                 if (!profession) return '';
-                const professionMap = {
-                    'Farmer': 'FRM', 'Cleric': 'CLE', 'Toolsmith': 'TSM', 'Weaponsmith': 'WSM',
-                    'Armorer': 'ARM', 'Fletcher': 'FLE', 'Librarian': 'LIB', 'Fisherman': 'FSH', 'Shepherd': 'SHP'
-                };
-                const profCode = professionMap[profession] || profession.substring(0, 3).toUpperCase();
-                const tCode = (tradeTag && tradeTag.length >= 2) ? tradeTag.substring(0, 3).toUpperCase() : 'XXX';
-                const prefix = `${profCode}-${tCode}`;
+                const prefix = getPrefix(profession, tradeTag);
                 
+                if (specificNum !== null) return `${prefix}-${specificNum.toString().padStart(3, '0')}`;
                 if (forceIdNumber !== null) return `${prefix}-${forceIdNumber.toString().padStart(3, '0')}`;
 
-                // Fallback / Auto-calc logic if no forceIdNumber
-                const nextNum = getNextSequenceNumber();
+                const allNumbers = villagers.filter(v => v.id !== excludeId).map(v => {
+                    const match = v.id.match(/-(\d{3})$/);
+                    return match ? parseInt(match[1], 10) : null;
+                }).filter(n => n !== null);
+                
+                const nextNum = allNumbers.length > 0 ? Math.max(...allNumbers) + 1 : 1;
                 return `${prefix}-${nextNum.toString().padStart(3, '0')}`;
             };
 
@@ -424,7 +445,17 @@
 
             // --- Handlers ---
             
-            // New logic: Check for vacancies first
+            const handleVacancySelection = (num) => {
+                if (editingId) {
+                    setForceIdNumber(num);
+                    const newId = generateId(newVillager.type, tradeCode, editingId, num);
+                    setNewVillager(prev => ({...prev, id: newId}));
+                    setIsIdPickerOpen(false);
+                } else {
+                    openNewVillagerForm(num);
+                }
+            };
+
             const handleLogButtonPress = () => {
                 const data = getVacancyData();
                 const hasOpenings = data.some(s => s.status !== 'active');
@@ -537,9 +568,17 @@
                 
                 const finalId = editingId ? newVillager.id : generateId(newVillager.type, tradeCode);
 
+                // --- Duplicate Check ---
+                const isDuplicate = villagers.some(v => v.id === finalId && v.id !== editingId && v.status !== 'Terminated');
+                if (isDuplicate) {
+                    if (!confirm(`Warning: ID ${finalId} is already in use by an Active villager! Save anyway?`)) {
+                        return;
+                    }
+                }
+
                 let updatedList = [...villagers];
 
-                if (forceIdNumber !== null && !editingId) {
+                if (forceIdNumber !== null) {
                     updatedList = updatedList.filter(v => {
                         const match = v.id.match(/-(\d{3})$/);
                         const num = match ? parseInt(match[1], 10) : null;
@@ -673,6 +712,40 @@
             const recordedDeaths = villagers.filter(v => v.status === 'Terminated').length;
             const totalDeaths = recordedDeaths + manualDeaths;
 
+            // --- Vacancy Calc ---
+            const getVacancyData = () => {
+                const activeIds = new Set();
+                const terminatedIds = new Set();
+                let maxNum = 0;
+
+                villagers.forEach(v => {
+                    const match = v.id.match(/-(\d{3})$/);
+                    if (match) {
+                        const num = parseInt(match[1], 10);
+                        if (num > maxNum) maxNum = num;
+                        if (v.status === 'Active') activeIds.add(num);
+                        else terminatedIds.add(num);
+                    }
+                });
+
+                const grid = [];
+                for (let i = 1; i <= maxNum; i++) {
+                    let status = 'empty';
+                    if (activeIds.has(i)) status = 'active';
+                    else if (terminatedIds.has(i)) status = 'terminated';
+                    grid.push({ num: i, status });
+                }
+                return grid;
+            };
+
+            // --- Validation & Styles ---
+            const getValidationIssues = (villager) => {
+                const issues = [];
+                if (!/^[A-Z]{3}-[A-Z0-9]{3}-\d{3}$/.test(villager.id)) issues.push("Invalid ID Format");
+                if (!villager.trades || villager.trades.length === 0) issues.push("No Trades Assigned");
+                return issues;
+            };
+
             const getStatusColor = (status) => {
                 switch(status) {
                     case 'Active': return 'bg-purple-900/30 text-purple-300 border-purple-700'; 
@@ -680,13 +753,6 @@
                     case 'Missing': return 'bg-yellow-900/20 text-yellow-500 border-yellow-700';
                     default: return 'bg-neutral-800 text-neutral-400';
                 }
-            };
-
-            const getValidationIssues = (villager) => {
-                const issues = [];
-                if (!/^[A-Z]{3}-[A-Z0-9]{3}-\d{3}$/.test(villager.id)) issues.push("Invalid ID Format");
-                if (!villager.trades || villager.trades.length === 0) issues.push("No Trades Assigned");
-                return issues;
             };
 
             const cartTotals = cart.reduce((acc, item) => {
@@ -837,12 +903,12 @@
                                                 {/* Left: ID & Main Info */}
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3 mb-3">
-                                                        <div className="flex items-center bg-black rounded border border-neutral-700 overflow-hidden group/id cursor-pointer" onClick={() => copyVillagerInfo(villager)} title="Click to copy to clipboard">
-                                                            <span className={`font-mono text-lg font-bold px-2 py-1 ${villager.status === 'Terminated' ? 'text-red-400' : 'text-purple-300'}`}>
-                                                                {villager.id}
-                                                            </span>
-                                                            <div className="bg-neutral-800 px-2 py-1.5 border-l border-neutral-700 text-neutral-500 group-hover/id:text-white transition-colors">
-                                                                <Copy size={14} />
+                                                        <div className="flex items-center bg-black rounded border border-neutral-700 overflow-hidden group/id cursor-pointer hover:border-purple-500 transition-colors" onClick={() => copyVillagerInfo(villager)} title="Click to copy to clipboard">
+                                                            {/* Replaced raw text with Badge Component */}
+                                                            <IdBadge id={villager.id} status={villager.status} />
+                                                            
+                                                            <div className="bg-neutral-900 px-2 py-1.5 border-l border-neutral-700 text-neutral-500 group-hover/id:text-white transition-colors h-full flex items-center">
+                                                                <Copy size={12} />
                                                             </div>
                                                         </div>
 
@@ -927,8 +993,8 @@
                             <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
                                 <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-lg shadow-2xl p-6 relative">
                                     <button onClick={() => setIsIdPickerOpen(false)} className="absolute top-4 right-4 text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    <h2 className="text-2xl font-bold text-white mb-1">Assign Identification Number</h2>
-                                    <p className="text-neutral-400 text-sm mb-6">Choose an ID number for the new villager.</p>
+                                    <h2 className="text-2xl font-bold text-white mb-1">{editingId ? 'Assign New ID to Villager' : 'Assign Identification Number'}</h2>
+                                    <p className="text-neutral-400 text-sm mb-6">Choose an ID number for this villager.</p>
 
                                     <div className="space-y-6">
                                         {/* Vacancies Section */}
@@ -938,7 +1004,7 @@
                                                 {vacancyData.filter(s => s.status !== 'active').map((slot) => (
                                                     <button 
                                                         key={slot.num}
-                                                        onClick={() => openNewVillagerForm(slot.num)}
+                                                        onClick={() => handleVacancySelection(slot.num)}
                                                         className={`
                                                             aspect-square rounded flex items-center justify-center font-mono text-sm border transition-all
                                                             ${slot.status === 'terminated' ? 'bg-red-900/20 border-red-600 text-red-400 hover:bg-red-900/40' : 
@@ -956,7 +1022,10 @@
                                         <div className="pt-4 border-t border-neutral-800">
                                             <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-3">Or Continue Sequence</h3>
                                             <button 
-                                                onClick={() => openNewVillagerForm(null)}
+                                                onClick={() => {
+                                                    if(editingId) handleVacancySelection(null); // Just regenerate ID with next avail
+                                                    else openNewVillagerForm(null);
+                                                }}
                                                 className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors group"
                                             >
                                                 <span>Generate Next ID</span>
@@ -1129,7 +1198,7 @@
                                                 <button 
                                                     key={slot.num}
                                                     disabled={slot.status === 'active'}
-                                                    onClick={() => slot.status !== 'active' && handleVacancyClick(slot.num)}
+                                                    onClick={() => handleVacancyClick(slot.num)}
                                                     className={`
                                                         aspect-square rounded flex items-center justify-center font-mono text-sm border transition-all
                                                         ${slot.status === 'active' ? 'bg-purple-900/50 border-purple-600 text-purple-200 cursor-default' : 
@@ -1202,10 +1271,25 @@
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-mono text-2xl text-purple-400 tracking-wider font-bold">{newVillager.id || '---'}</span>
                                                     <button type="button" onClick={handleRegenerateId} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-purple-400 rounded transition-colors border border-neutral-600" title="Regenerate ID"><RefreshCw size={16} /></button>
+                                                    {editingId && (
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setIsIdPickerOpen(true)} 
+                                                            className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-orange-400 rounded transition-colors border border-neutral-600"
+                                                            title="Pick Vacant ID"
+                                                        >
+                                                            <GridIcon size={16} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                                 {forceIdNumber !== null && !editingId && (
                                                     <span className="text-xs text-orange-400 flex items-center gap-1 mt-1 animate-pulse">
                                                         <AlertTriangle size={12}/> Filling Vacancy #{forceIdNumber.toString().padStart(3, '0')}
+                                                    </span>
+                                                )}
+                                                {forceIdNumber !== null && editingId && (
+                                                    <span className="text-xs text-purple-400 flex items-center gap-1 mt-1">
+                                                        <Check size={12}/> Reassigning to #{forceIdNumber.toString().padStart(3, '0')}
                                                     </span>
                                                 )}
                                             </div>
