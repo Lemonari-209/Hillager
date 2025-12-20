@@ -212,6 +212,15 @@
                 },
             ];
 
+            // New State for Last Updated
+            const [lastUpdated, setLastUpdated] = useState(() => {
+                return localStorage.getItem('villagerLastUpdated') || null;
+            });
+
+            useEffect(() => {
+                if (lastUpdated) localStorage.setItem('villagerLastUpdated', lastUpdated);
+            }, [lastUpdated]);
+
             const [manualDeaths, setManualDeaths] = useState(() => {
                 const saved = localStorage.getItem('villagerManualDeaths');
                 return saved ? parseInt(saved, 10) : 0;
@@ -273,6 +282,7 @@
             const [newTagValue, setNewTagValue] = useState('');
             
             const searchInputRef = useRef(null);
+            const fileInputRef = useRef(null);
 
             useEffect(() => {
                 localStorage.setItem('villagerCatalogue', JSON.stringify(villagers));
@@ -653,6 +663,8 @@
                     showToast("New villager catalogued!");
                 }
                 
+                setLastUpdated(new Date().toISOString()); // Update timestamp
+
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
                 setTradeCode('');
@@ -670,11 +682,13 @@
                     }
                     return v;
                 }));
+                setLastUpdated(new Date().toISOString()); // Update timestamp
             };
 
             const deleteVillager = (id) => {
                 if (confirm('Are you sure you want to delete this record permanently?')) {
                     setVillagers(villagers.filter(v => v.id !== id));
+                    setLastUpdated(new Date().toISOString()); // Update timestamp
                     showToast("Record permanently deleted.", "error");
                 }
             };
@@ -684,6 +698,7 @@
                     if (confirm('Final check: This action cannot be undone. Delete everything?')) {
                         setVillagers([]);
                         setManualDeaths(0);
+                        setLastUpdated(new Date().toISOString()); // Update timestamp
                         showToast('All data cleared.', 'error');
                         setIsSettingsOpen(false);
                     }
@@ -721,11 +736,13 @@
                                 setVillagers(imported.villagers);
                                 if (imported.manualDeaths !== undefined) setManualDeaths(imported.manualDeaths);
                                 if (imported.tagOverrides) setTagOverrides(prev => ({...prev, ...imported.tagOverrides}));
+                                setLastUpdated(new Date().toISOString()); // Update timestamp
                                 showToast("Import successful!");
                             }
                         } else if (Array.isArray(imported)) {
                             if (confirm(`Load ${imported.length} villagers? This overwrites current list.`)) {
                                 setVillagers(imported);
+                                setLastUpdated(new Date().toISOString()); // Update timestamp
                                 showToast("Import successful!");
                             }
                         } else {
@@ -737,6 +754,22 @@
                 };
                 reader.readAsText(file);
                 e.target.value = '';
+            };
+
+            const handleCopySummary = () => {
+                const summary = villagers.filter(v => v.status === 'Active').map(v => {
+                    const trades = v.trades.map(t => {
+                        if (t.isBuy) return `Sell ${t.item}`;
+                        return `${t.resultQty && t.resultQty > 1 ? t.resultQty + 'x ' : ''}${t.item} (${t.price}e)`;
+                    }).join(', ');
+                    return `[${v.id}] ${v.location}: ${trades}`;
+                }).join('\n');
+                
+                navigator.clipboard.writeText(summary).then(() => {
+                    showToast("Full catalogue copied to clipboard!");
+                }).catch(() => {
+                    showToast("Failed to copy summary.", "error");
+                });
             };
 
             const getProcessedVillagers = () => {
@@ -843,7 +876,14 @@
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-neutral-800 pb-4 gap-4">
                             <div>
                                 <h1 className="text-3xl font-bold text-purple-400 tracking-tight">Sandwich Club SMP - Trading Hall</h1>
-                                <p className="text-neutral-400 text-sm mt-1">Manage villagers for the Sandwich Club Survival Multiplayer Server.</p>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                                    <p className="text-neutral-400 text-sm">Manage villagers for the Sandwich Club Survival Multiplayer Server.</p>
+                                    {lastUpdated && (
+                                        <span className="text-[10px] uppercase tracking-wider text-neutral-600 border border-neutral-800 px-2 py-0.5 rounded-full self-start sm:self-auto">
+                                            Last Updated: {new Date(lastUpdated).toLocaleString()}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             
                             <div className="flex gap-2 items-center flex-wrap">
@@ -1277,108 +1317,54 @@
                             </div>
                         )}
 
-                        {/* User Guide Modal */}
-                        {isGuideOpen && (
-                            <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-                                <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-2xl shadow-2xl my-8">
-                                    <div className="flex justify-between items-center p-4 border-b border-neutral-700 sticky top-0 bg-neutral-900 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><HelpCircle size={20} /> User Guide</h2>
-                                        <button onClick={() => setIsGuideOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    </div>
-                                    <div className="p-6 space-y-6">
-                                        <div className="space-y-2">
-                                            <h3 className="text-lg font-bold text-purple-400">🏷️ The Auto-ID System</h3>
-                                            <p className="text-neutral-400 text-sm">Every villager gets a unique ID formatted as <strong>PPP-TTT-###</strong>.</p>
-                                            <ul className="list-disc pl-5 text-sm text-neutral-400 space-y-1">
-                                                <li><strong>PPP (Profession):</strong> Auto-generated from job (e.g., Librarian = LIB).</li>
-                                                <li><strong>TTT (Trade Tag):</strong> Derived from their primary trade (e.g., Mending = MND).</li>
-                                                <li><strong>### (Number):</strong> A sequential number that never repeats unless manually reclaimed.</li>
-                                            </ul>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <h3 className="text-lg font-bold text-orange-400">⭐ Starring Trades & Best Prices</h3>
-                                            <p className="text-neutral-400 text-sm">
-                                                Click the <strong>Star Icon</strong> to set the Primary Trade (ID Tag).
-                                                Trades with a <span className="text-yellow-400 font-bold inline-flex items-center"><Trophy size={12} className="mx-1"/> Trophy</span> icon are the cheapest price for that item on the server!
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <h3 className="text-lg font-bold text-blue-400">📖 Tag Dictionary</h3>
-                                            <p className="text-neutral-400 text-sm">
-                                                Want "Iron Helmet" to be "HLM" instead of "IRN"? Go to <span className="inline-flex items-center align-middle bg-neutral-800 px-1 rounded border border-neutral-600"><Settings size={12} className="mr-1"/> Settings</span> to set custom overrides.
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <h3 className="text-lg font-bold text-red-400">☠️ Vacancy & Reclaiming</h3>
-                                            <p className="text-neutral-400 text-sm">
-                                                If a villager dies, mark them as <strong>Terminated</strong>. To reuse their ID number later, open the <span className="inline-flex items-center align-middle bg-neutral-800 px-1 rounded border border-neutral-600"><GridIcon size={12} className="mr-1"/> Vacancy Grid</span>.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Vacancy Modal */}
-                        {isVacancyOpen && (
-                            <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-                                <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-lg shadow-2xl my-8">
-                                    <div className="flex justify-between items-center p-4 border-b border-neutral-700 sticky top-0 bg-neutral-900 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><GridIcon size={20} /> ID Slot Status</h2>
-                                        <button onClick={() => setIsVacancyOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    </div>
-                                    <div className="p-4">
-                                        <p className="text-sm text-neutral-400 mb-4">Click a <span className="text-red-400 font-bold">Red</span> (Terminated) or <span className="text-neutral-500 font-bold">Grey</span> (Empty) slot to reclaim the ID number.</p>
-                                        <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
-                                            {getVacancyData().map((slot) => (
-                                                <button 
-                                                    key={slot.num}
-                                                    disabled={slot.status === 'active'}
-                                                    onClick={() => handleVacancyClick(slot.num)}
-                                                    className={`
-                                                        aspect-square rounded flex items-center justify-center font-mono text-sm border transition-all
-                                                        ${slot.status === 'active' ? 'bg-purple-900/50 border-purple-600 text-purple-200 cursor-default' : 
-                                                          slot.status === 'terminated' ? 'bg-red-900/20 border-red-600 text-red-400 hover:bg-red-900/40 cursor-pointer' : 
-                                                          'bg-neutral-800/30 border-dashed border-neutral-600 text-neutral-500 hover:bg-neutral-800 hover:text-white cursor-pointer'}
-                                                    `}
-                                                    title={slot.status === 'active' ? 'Occupied' : slot.status === 'terminated' ? 'Terminated (Open)' : 'Empty Slot'}
-                                                >
-                                                    {slot.num.toString().padStart(3, '0')}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         {/* Settings Modal */}
                         {isSettingsOpen && (
                             <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
                                 <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-lg shadow-2xl my-8">
                                     <div className="flex justify-between items-center p-4 border-b border-neutral-700 sticky top-0 bg-neutral-900 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={20} /> Tag Dictionary</h2>
+                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={20} /> Settings & Data</h2>
                                         <button onClick={() => setIsSettingsOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
                                     </div>
-                                    <div className="p-4 space-y-4">
-                                        <p className="text-sm text-neutral-400">Define custom shorthands for trade tags.</p>
-                                        <form onSubmit={handleAddOverride} className="flex gap-2 bg-black/50 p-2 rounded border border-neutral-700">
-                                            <input placeholder="Item Name" className="flex-1 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none" value={newTagKey} onChange={e => setNewTagKey(e.target.value)} />
-                                            <input placeholder="Code (HLM)" maxLength={3} className="w-20 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none uppercase font-mono" value={newTagValue} onChange={e => setNewTagValue(e.target.value.toUpperCase())} />
-                                            <button type="submit" className="bg-orange-600 hover:bg-orange-500 text-white p-2 rounded"><Plus size={20}/></button>
-                                        </form>
-                                        <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                                            {Object.entries(tagOverrides).map(([key, value]) => (
-                                                <div key={key} className="flex justify-between items-center bg-black p-2 rounded border border-neutral-700">
-                                                    <span className="text-neutral-200 text-sm">{key}</span>
-                                                    <div className="flex items-center gap-3"><span className="font-mono text-purple-400 font-bold">{value}</span><button onClick={() => handleDeleteOverride(key)} className="text-neutral-500 hover:text-red-400"><Trash2 size={16}/></button></div>
-                                                </div>
-                                            ))}
+                                    <div className="p-4 space-y-6">
+                                        
+                                        {/* Tag Dictionary */}
+                                        <div>
+                                            <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-2">Tag Dictionary</h3>
+                                            <p className="text-xs text-neutral-400 mb-2">Define custom shorthands for trade tags.</p>
+                                            <form onSubmit={handleAddOverride} className="flex gap-2 bg-black/50 p-2 rounded border border-neutral-700 mb-2">
+                                                <input placeholder="Item Name" className="flex-1 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none" value={newTagKey} onChange={e => setNewTagKey(e.target.value)} />
+                                                <input placeholder="Code (HLM)" maxLength={3} className="w-20 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none uppercase font-mono" value={newTagValue} onChange={e => setNewTagValue(e.target.value.toUpperCase())} />
+                                                <button type="submit" className="bg-orange-600 hover:bg-orange-500 text-white p-2 rounded"><Plus size={20}/></button>
+                                            </form>
+                                            <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                                {Object.entries(tagOverrides).map(([key, value]) => (
+                                                    <div key={key} className="flex justify-between items-center bg-black p-2 rounded border border-neutral-700">
+                                                        <span className="text-neutral-200 text-sm">{key}</span>
+                                                        <div className="flex items-center gap-3"><span className="font-mono text-purple-400 font-bold">{value}</span><button onClick={() => handleDeleteOverride(key)} className="text-neutral-500 hover:text-red-400"><Trash2 size={16}/></button></div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Data Management Section */}
+                                        <div className="pt-4 border-t border-neutral-700">
+                                            <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-3">Share & Backup</h3>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button onClick={handleExport} className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 p-3 rounded flex items-center justify-center gap-2 border border-neutral-600 transition-colors">
+                                                    <Download size={18} /> <span className="text-sm">Export File</span>
+                                                </button>
+                                                <button onClick={() => fileInputRef.current.click()} className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 p-3 rounded flex items-center justify-center gap-2 border border-neutral-600 transition-colors">
+                                                    <Upload size={18} /> <span className="text-sm">Import File</span>
+                                                </button>
+                                                <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
+                                            </div>
+                                            <button onClick={handleCopySummary} className="w-full mt-3 bg-blue-900/30 hover:bg-blue-900/50 text-blue-300 border border-blue-800 p-3 rounded flex items-center justify-center gap-2 transition-colors">
+                                                <Copy size={18} /> <span className="text-sm">Copy Catalogue Summary</span>
+                                            </button>
+                                            <p className="text-xs text-neutral-500 mt-2 text-center">Share the exported file or copied text with other players!</p>
                                         </div>
                                         
+                                        {/* Danger Zone */}
                                         <div className="pt-4 border-t border-neutral-700">
                                             <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2"><AlertTriangle size={16}/> Danger Zone</h3>
                                             <button 
