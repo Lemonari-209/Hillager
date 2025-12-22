@@ -7,245 +7,219 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    // We removed fixed colors here to rely on standard Tailwind palette for dynamic switching
+                }
+            }
+        }
+    </script>
+
     <style>
-        /* Custom scrollbar for Black/Purple theme */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        /* Base styles */
+        body {
+            transition: background 0.5s ease;
         }
-        ::-webkit-scrollbar-track {
-            background: #0a0a0a; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #581c87; /* Purple-900 */
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #7e22ce; /* Purple-700 */
-        }
+        
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
         .toast-enter {
-            animation: slideIn 0.3s ease-out forwards;
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .slide-in-right {
-            animation: slideIn 0.3s ease-out forwards;
+        
+        /* Glass effect utilities */
+        .glass-panel {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
         }
     </style>
 </head>
-<body class="bg-black text-neutral-200">
+<body class="min-h-screen transition-colors duration-500">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
+        // --- THEME CONFIGURATION ---
+        const THEMES = {
+            emerald: {
+                id: 'emerald',
+                name: 'Deep Slate',
+                neutral: 'slate',   // Backgrounds
+                primary: 'emerald', // Main accents (Active, Buy)
+                secondary: 'amber', // Secondary accents (Sell)
+                accent: 'teal',     // Gradients/Library
+                bgBase: '#020617',  // slate-950
+                bgGradient: 'radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%), radial-gradient(circle at 85% 10%, rgba(14, 165, 233, 0.05) 0%, transparent 30%)',
+                scrollbarColor: '#059669',
+                glassBorder: 'rgba(52, 211, 153, 0.1)'
+            },
+            void: {
+                id: 'void',
+                name: 'Void',
+                neutral: 'neutral', // true gray
+                primary: 'purple',
+                secondary: 'orange',
+                accent: 'indigo',
+                bgBase: '#0a0a0a',  // neutral-950
+                bgGradient: 'radial-gradient(circle at 50% 0%, rgba(147, 51, 234, 0.1) 0%, transparent 50%), radial-gradient(circle at 85% 10%, rgba(234, 88, 12, 0.05) 0%, transparent 30%)',
+                scrollbarColor: '#9333ea',
+                glassBorder: 'rgba(168, 85, 247, 0.1)'
+            },
+            nether: {
+                id: 'nether',
+                name: 'Nether',
+                neutral: 'stone',   // warm gray
+                primary: 'red',
+                secondary: 'yellow',
+                accent: 'orange',
+                bgBase: '#0c0a09',  // stone-950
+                bgGradient: 'radial-gradient(circle at 50% 0%, rgba(220, 38, 38, 0.08) 0%, transparent 50%), radial-gradient(circle at 85% 10%, rgba(234, 179, 8, 0.05) 0%, transparent 30%)',
+                scrollbarColor: '#dc2626',
+                glassBorder: 'rgba(239, 68, 68, 0.1)'
+            }
+        };
+
         // --- Icons ---
         const IconBase = ({ children, size = 24, className = "" }) => (
-            <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width={size} 
-                height={size} 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className={className}
-            >
-                {children}
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
         );
 
-        const Search = (props) => (
-            <IconBase {...props}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></IconBase>
-        );
-        const Plus = (props) => (
-            <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></IconBase>
-        );
-        const Minus = (props) => (
-            <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"></line></IconBase>
-        );
-        const Trash2 = (props) => (
-            <IconBase {...props}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></IconBase>
-        );
-        const Skull = (props) => (
-            <IconBase {...props}>
-                <circle cx="9" cy="12" r="1" fill="currentColor" />
-                <circle cx="15" cy="12" r="1" fill="currentColor" />
-                <path d="M8 20v2h8v-2" />
-                <path d="M12.5 17l.5-1.5" />
-                <path d="M11.5 17l-.5-1.5" />
-                <path d="M5.56 16.56A8 8 0 1 1 18.44 16.56" />
-            </IconBase>
-        );
-        const Check = (props) => (
-            <IconBase {...props}><polyline points="20 6 9 17 4 12"></polyline></IconBase>
-        );
-        const MapPin = (props) => (
-            <IconBase {...props}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></IconBase>
-        );
-        const Tag = (props) => (
-            <IconBase {...props}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></IconBase>
-        );
-        const Save = (props) => (
-            <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></IconBase>
-        );
-        const X = (props) => (
-            <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase>
-        );
-        const Coins = (props) => (
-            <IconBase {...props}><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></IconBase>
-        );
-        const Users = (props) => (
-            <IconBase {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></IconBase>
-        );
-        const Pencil = (props) => (
-            <IconBase {...props}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></IconBase>
-        );
-        const ArrowUpDown = (props) => (
-            <IconBase {...props}><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></IconBase>
-        );
-        const Download = (props) => (
-            <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></IconBase>
-        );
-        const Upload = (props) => (
-            <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></IconBase>
-        );
-        const AlertTriangle = (props) => (
-            <IconBase {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase>
-        );
-        const ArrowRight = (props) => (
-            <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></IconBase>
-        );
-        const ShoppingBag = (props) => (
-            <IconBase {...props}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></IconBase>
-        );
-        const Star = (props) => (
-            <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase>
-        );
-        const RefreshCw = (props) => (
-            <IconBase {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconBase>
-        );
-        const Settings = (props) => (
-            <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase>
-        );
-        const Copy = (props) => (
-            <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></IconBase>
-        );
-        const GridIcon = (props) => (
-            <IconBase {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></IconBase>
-        );
-        const HelpCircle = (props) => (
-            <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase>
-        );
-        const Trophy = (props) => (
-            <IconBase {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17"></path><path d="M14 14.66V17"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></IconBase>
-        );
-        const BookOpen = (props) => (
-            <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></IconBase>
-        );
+        const Search = (props) => ( <IconBase {...props}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></IconBase> );
+        const Plus = (props) => ( <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></IconBase> );
+        const Minus = (props) => ( <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"></line></IconBase> );
+        const Trash2 = (props) => ( <IconBase {...props}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></IconBase> );
+        const Skull = (props) => ( <IconBase {...props}><circle cx="9" cy="12" r="1" fill="currentColor" /><circle cx="15" cy="12" r="1" fill="currentColor" /><path d="M8 20v2h8v-2" /><path d="M12.5 17l.5-1.5" /><path d="M11.5 17l-.5-1.5" /><path d="M5.56 16.56A8 8 0 1 1 18.44 16.56" /></IconBase> );
+        const Check = (props) => ( <IconBase {...props}><polyline points="20 6 9 17 4 12"></polyline></IconBase> );
+        const MapPin = (props) => ( <IconBase {...props}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></IconBase> );
+        const Save = (props) => ( <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></IconBase> );
+        const X = (props) => ( <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase> );
+        const Coins = (props) => ( <IconBase {...props}><circle cx="8" cy="8" r="6"></circle><path d="M18.09 10.37A6 6 0 1 1 10.34 18"></path><path d="M7 6h1v4"></path><path d="m16.71 13.88.7.71-2.82 2.82"></path></IconBase> );
+        const Users = (props) => ( <IconBase {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></IconBase> );
+        const Pencil = (props) => ( <IconBase {...props}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></IconBase> );
+        const ArrowUpDown = (props) => ( <IconBase {...props}><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></IconBase> );
+        const Download = (props) => ( <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></IconBase> );
+        const Upload = (props) => ( <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></IconBase> );
+        const AlertTriangle = (props) => ( <IconBase {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase> );
+        const ShoppingBag = (props) => ( <IconBase {...props}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></IconBase> );
+        const Star = (props) => ( <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase> );
+        const RefreshCw = (props) => ( <IconBase {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconBase> );
+        const Settings = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase> );
+        const Copy = (props) => ( <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></IconBase> );
+        const GridIcon = (props) => ( <IconBase {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></IconBase> );
+        const HelpCircle = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase> );
+        const Trophy = (props) => ( <IconBase {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17"></path><path d="M14 14.66V17"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></IconBase> );
+        const BookOpen = (props) => ( <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></IconBase> );
+        const Palette = (props) => ( <IconBase {...props}><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.55 0 1-.45 1-1 0-.28-.11-.53-.29-.71-.3-.3-.29-1.01.32-1.34.43-.23.78-.47 1.14-.71.55-.37 1.34-.82 2.83-.82 2.76 0 5-2.24 5-5s-2.24-5-5-5h-5c-.55 0-1 .45-1 1z"></path></IconBase> );
 
         // --- Helper Component: Segmented ID Badge ---
-        const IdBadge = ({ id, status }) => {
+        const IdBadge = ({ id, status, size = "normal", theme }) => {
             const parts = id.split('-');
             const isTerminated = status === 'Terminated';
+            const textSize = size === "large" ? "text-base" : "text-xs";
+            const padding = size === "large" ? "px-2 py-1.5" : "px-1.5 py-0.5";
             
-            // Fallback for non-standard IDs
+            const n = theme.neutral;
+            const p = theme.primary;
+
             if (parts.length !== 3) {
-                return <span className={`font-mono text-lg font-bold px-2 py-1 ${isTerminated ? 'text-red-400' : 'text-purple-300'}`}>{id}</span>;
+                return <span className={`font-mono font-bold ${padding} rounded bg-${n}-900 border border-${n}-800 ${isTerminated ? 'text-red-400' : `text-${p}-300`}`}>{id}</span>;
             }
 
             return (
-                <div className={`flex font-mono text-sm font-bold select-none ${isTerminated ? 'opacity-70' : ''}`}>
-                    <span className="bg-neutral-800 text-neutral-400 px-1.5 py-1 border-r border-neutral-700">{parts[0]}</span>
-                    <span className={`px-1.5 py-1 border-r border-neutral-700 ${isTerminated ? 'bg-red-900/20 text-red-400' : 'bg-neutral-700 text-neutral-200'}`}>{parts[1]}</span>
-                    <span className={`px-1.5 py-1 ${isTerminated ? 'bg-red-900/40 text-red-300' : 'bg-purple-900/40 text-purple-300'}`}>{parts[2]}</span>
+                <div className={`flex font-mono ${textSize} font-bold select-none rounded overflow-hidden shadow-sm border border-${n}-800 ${isTerminated ? 'opacity-70 grayscale' : ''}`}>
+                    <span className={`bg-${n}-900 text-${n}-500 ${padding} border-r border-${n}-800`}>{parts[0]}</span>
+                    <span className={`${padding} border-r border-${n}-800 ${isTerminated ? 'bg-red-900/10 text-red-500' : `bg-${n}-800 text-${n}-300`}`}>{parts[1]}</span>
+                    <span className={`${padding} ${isTerminated ? 'bg-red-900/20 text-red-400' : `bg-${p}-900/30 text-${p}-300`}`}>{parts[2]}</span>
                 </div>
             );
         };
 
-        // --- Constants ---
         const ALL_ENCHANTMENTS = [
-            // Armor
             "Protection", "Fire Protection", "Feather Falling", "Blast Protection", "Projectile Protection", 
             "Respiration", "Aqua Affinity", "Thorns", "Depth Strider", "Frost Walker", "Soul Speed", "Swift Sneak",
-            // Sword
             "Sharpness", "Smite", "Bane of Arthropods", "Knockback", "Fire Aspect", "Looting", "Sweeping Edge",
-            // Tools
             "Efficiency", "Silk Touch", "Unbreaking", "Fortune", "Mending",
-            // Bow
             "Power", "Punch", "Flame", "Infinity",
-            // Fishing
             "Luck of the Sea", "Lure",
-            // Trident
             "Loyalty", "Impaling", "Riptide", "Channeling",
-            // Crossbow
             "Multishot", "Piercing", "Quick Charge"
         ];
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
             const initialVillagers = [
-                { 
-                    id: 'LIB-MND-001', 
-                    type: 'Librarian', 
-                    trades: [{ item: 'Mending', price: 10, costItem: 'Book', costQty: 1, isBuy: false, isStarred: true, resultQty: 1 }, { item: 'Paper', price: 24, isBuy: true }], 
-                    location: 'Enchanted Hall', 
-                    status: 'Active', 
-                    notes: 'First mending villager' 
-                },
-                { 
-                    id: 'FLE-STK-002', 
-                    type: 'Fletcher', 
-                    trades: [{ item: 'Sticks', price: 32, isBuy: true, isStarred: true }, { item: 'Flint', price: 26, isBuy: true }], 
-                    location: 'Fletcher Hall', 
-                    status: 'Active', 
-                    notes: 'Zombie cured once' 
-                },
+                { id: 'LIB-MND-001', type: 'Librarian', trades: [{ item: 'Mending', price: 10, costItem: 'Book', costQty: 1, isBuy: false, isStarred: true, resultQty: 1 }, { item: 'Paper', price: 24, isBuy: true }], location: 'Enchanted Hall', status: 'Active', notes: 'First mending villager' },
+                { id: 'FLE-STK-002', type: 'Fletcher', trades: [{ item: 'Sticks', price: 32, isBuy: true, isStarred: true }, { item: 'Flint', price: 26, isBuy: true }], location: 'Fletcher Hall', status: 'Active', notes: 'Zombie cured once' },
             ];
 
-            // New State for Last Updated
-            const [lastUpdated, setLastUpdated] = useState(() => {
-                return localStorage.getItem('villagerLastUpdated') || null;
-            });
+            const [themeId, setThemeId] = useState(() => localStorage.getItem('villagerTheme') || 'emerald');
+            const theme = THEMES[themeId] || THEMES.emerald;
 
-            useEffect(() => {
-                if (lastUpdated) localStorage.setItem('villagerLastUpdated', lastUpdated);
-            }, [lastUpdated]);
-
-            const [manualDeaths, setManualDeaths] = useState(() => {
-                const saved = localStorage.getItem('villagerManualDeaths');
-                return saved ? parseInt(saved, 10) : 0;
-            });
-
-            const [tagOverrides, setTagOverrides] = useState(() => {
-                const saved = localStorage.getItem('villagerTagOverrides');
-                return saved ? JSON.parse(saved) : { "Iron Helmet": "HLM", "Mending": "MND" }; 
-            });
-
+            const [lastUpdated, setLastUpdated] = useState(() => localStorage.getItem('villagerLastUpdated') || null);
+            const [manualDeaths, setManualDeaths] = useState(() => { const saved = localStorage.getItem('villagerManualDeaths'); return saved ? parseInt(saved, 10) : 0; });
+            const [tagOverrides, setTagOverrides] = useState(() => { const saved = localStorage.getItem('villagerTagOverrides'); return saved ? JSON.parse(saved) : { "Iron Helmet": "HLM", "Mending": "MND" }; });
             const [villagers, setVillagers] = useState(() => {
                 const saved = localStorage.getItem('villagerCatalogue');
                 if (!saved) return initialVillagers;
                 try {
                     const parsed = JSON.parse(saved);
                     return parsed.map(v => {
-                        if (v.trade && !v.trades) {
-                            return { ...v, trades: [{ item: v.trade, price: v.price, isBuy: false, resultQty: 1 }], trade: undefined, price: undefined };
-                        }
+                        if (v.trade && !v.trades) { return { ...v, trades: [{ item: v.trade, price: v.price, isBuy: false, resultQty: 1 }], trade: undefined, price: undefined }; }
                         return v;
                     });
-                } catch (e) {
-                    return initialVillagers;
-                }
+                } catch (e) { return initialVillagers; }
             });
+
+            // Persist Theme
+            useEffect(() => {
+                localStorage.setItem('villagerTheme', themeId);
+                document.body.style.backgroundColor = theme.bgBase;
+                document.body.style.backgroundImage = theme.bgGradient;
+            }, [themeId]);
+
+            // Persist Other Data
+            useEffect(() => { if (lastUpdated) localStorage.setItem('villagerLastUpdated', lastUpdated); }, [lastUpdated]);
+            useEffect(() => { localStorage.setItem('villagerCatalogue', JSON.stringify(villagers)); }, [villagers]);
+            useEffect(() => { localStorage.setItem('villagerManualDeaths', manualDeaths.toString()); }, [manualDeaths]);
+            useEffect(() => { localStorage.setItem('villagerTagOverrides', JSON.stringify(tagOverrides)); }, [tagOverrides]);
+
+            // Inject Scrollbar Styles Dynamically
+            useEffect(() => {
+                const styleId = 'dynamic-scrollbar-styles';
+                let styleTag = document.getElementById(styleId);
+                if (!styleTag) {
+                    styleTag = document.createElement('style');
+                    styleTag.id = styleId;
+                    document.head.appendChild(styleTag);
+                }
+                styleTag.textContent = `
+                    ::-webkit-scrollbar { width: 8px; height: 8px; }
+                    ::-webkit-scrollbar-track { background: ${theme.bgBase}; }
+                    ::-webkit-scrollbar-thumb { background: ${theme.scrollbarColor}; border-radius: 4px; }
+                    ::-webkit-scrollbar-thumb:hover { filter: brightness(120%); }
+                    .glass-panel { border-color: ${theme.glassBorder}; background: ${theme.bgBase}cc; }
+                    .selection-custom::selection { background-color: ${theme.scrollbarColor}; color: white; }
+                `;
+            }, [theme]);
 
             const [activeTab, setActiveTab] = useState('buy');
             const [searchTerm, setSearchTerm] = useState('');
@@ -265,14 +239,7 @@
             const [cart, setCart] = useState([]);
             const [toasts, setToasts] = useState([]);
 
-            const [newVillager, setNewVillager] = useState({
-                id: '',
-                type: 'Librarian',
-                trades: [],
-                location: '',
-                notes: ''
-            });
-
+            const [newVillager, setNewVillager] = useState({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
             const [forceIdNumber, setForceIdNumber] = useState(null);
             const [tradeCode, setTradeCode] = useState('');
             const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
@@ -285,63 +252,26 @@
             const fileInputRef = useRef(null);
 
             useEffect(() => {
-                localStorage.setItem('villagerCatalogue', JSON.stringify(villagers));
-            }, [villagers]);
-
-            useEffect(() => {
-                localStorage.setItem('villagerManualDeaths', manualDeaths.toString());
-            }, [manualDeaths]);
-
-            useEffect(() => {
-                localStorage.setItem('villagerTagOverrides', JSON.stringify(tagOverrides));
-            }, [tagOverrides]);
-
-            useEffect(() => {
                 const handleKeyDown = (e) => {
-                    if (e.key === 'Escape') {
-                        setIsFormOpen(false);
-                        setIsSettingsOpen(false);
-                        setIsVacancyOpen(false);
-                        setIsGuideOpen(false);
-                        setIsCartOpen(false);
-                        setIsIdPickerOpen(false);
-                        setIsLibraryOpen(false);
-                    }
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                        e.preventDefault();
-                        searchInputRef.current?.focus();
-                    }
+                    if (e.key === 'Escape') { setIsFormOpen(false); setIsSettingsOpen(false); setIsVacancyOpen(false); setIsGuideOpen(false); setIsCartOpen(false); setIsIdPickerOpen(false); setIsLibraryOpen(false); }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInputRef.current?.focus(); }
                 };
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, []);
 
-            // --- Enchantment Library Logic ---
+            // --- Business Logic ---
             const libraryData = useMemo(() => {
                 const found = {};
-                
-                // Sort enchantments by length desc to match "Fire Protection" before "Protection"
                 const sortedEnchants = [...ALL_ENCHANTMENTS].sort((a, b) => b.length - a.length);
-
                 villagers.filter(v => v.status === 'Active').forEach(v => {
                     v.trades.forEach(t => {
-                        if (t.isBuy) return; // Ignore selling trades
+                        if (t.isBuy) return;
                         const itemNameLower = t.item.toLowerCase();
-                        
-                        // Find the best match
                         const match = sortedEnchants.find(ench => itemNameLower.includes(ench.toLowerCase()));
-                        
                         if (match) {
                             const price = parseInt(t.price) || 999;
-                            if (!found[match] || price < found[match].price) {
-                                found[match] = { 
-                                    price, 
-                                    villagerId: v.id, 
-                                    location: v.location, 
-                                    fullItemName: t.item,
-                                    villagerType: v.type
-                                };
-                            }
+                            if (!found[match] || price < found[match].price) { found[match] = { price, villagerId: v.id, location: v.location, fullItemName: t.item, villagerType: v.type }; }
                         }
                     });
                 });
@@ -351,16 +281,7 @@
             const bestPrices = useMemo(() => {
                 const prices = {}; 
                 villagers.filter(v => v.status === 'Active').forEach(v => {
-                    if(v.trades) {
-                        v.trades.forEach(t => {
-                            const p = parseInt(t.price);
-                            if (!isNaN(p)) {
-                                if (prices[t.item] === undefined || p < prices[t.item]) {
-                                    prices[t.item] = p;
-                                }
-                            }
-                        });
-                    }
+                    if(v.trades) { v.trades.forEach(t => { const p = parseInt(t.price); if (!isNaN(p)) { if (prices[t.item] === undefined || p < prices[t.item]) { prices[t.item] = p; } } }); }
                 });
                 return prices;
             }, [villagers]);
@@ -368,134 +289,59 @@
             const showToast = (message, type = 'success') => {
                 const id = Date.now();
                 setToasts(prev => [...prev, { id, message, type }]);
-                setTimeout(() => {
-                    setToasts(prev => prev.filter(t => t.id !== id));
-                }, 3000);
+                setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== id)); }, 3000);
             };
 
             const addToCart = (trade, villager) => {
-                const newItem = {
-                    uniqueId: Date.now(),
-                    villagerId: villager.id,
-                    location: villager.location,
-                    item: trade.item,
-                    price: trade.price,
-                    costItem: trade.costItem,
-                    costQty: trade.costQty,
-                    isBuy: trade.isBuy,
-                    resultQty: trade.resultQty || 1,
-                    qty: 1
-                };
+                const newItem = { uniqueId: Date.now(), villagerId: villager.id, location: villager.location, item: trade.item, price: trade.price, costItem: trade.costItem, costQty: trade.costQty, isBuy: trade.isBuy, resultQty: trade.resultQty || 1, qty: 1 };
                 setCart(prev => [...prev, newItem]);
                 showToast(`Added ${trade.item} to Shopping List`);
             };
 
-            const removeFromCart = (uniqueId) => {
-                setCart(prev => prev.filter(item => item.uniqueId !== uniqueId));
-            };
-
-            const updateCartQty = (uniqueId, delta) => {
-                setCart(prev => prev.map(item => {
-                    if(item.uniqueId === uniqueId) {
-                        const newQty = Math.max(1, item.qty + delta);
-                        return { ...item, qty: newQty };
-                    }
-                    return item;
-                }));
-            };
+            const removeFromCart = (uniqueId) => setCart(prev => prev.filter(item => item.uniqueId !== uniqueId));
+            const updateCartQty = (uniqueId, delta) => setCart(prev => prev.map(item => item.uniqueId === uniqueId ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
 
             const copyVillagerInfo = (villager) => {
-                const tradesSummary = villager.trades.map(t => {
-                    if (t.isBuy) return `Sell ${t.item}`;
-                    const qtyStr = t.resultQty > 1 ? `${t.resultQty} ` : '';
-                    return `${qtyStr}${t.item} (${t.price}e)`;
-                }).slice(0, 2).join(', ');
-                
+                const tradesSummary = villager.trades.map(t => { if (t.isBuy) return `Sell ${t.item}`; const qtyStr = t.resultQty > 1 ? `${t.resultQty} ` : ''; return `${qtyStr}${t.item} (${t.price}e)`; }).slice(0, 2).join(', ');
                 const text = `[${villager.id}] ${villager.type} @ ${villager.location || 'Unknown'}: ${tradesSummary}${villager.trades.length > 2 ? '...' : ''}`;
-                
-                navigator.clipboard.writeText(text).then(() => {
-                    showToast(`Copied info for ${villager.id}`);
-                }).catch(err => {
-                    showToast('Failed to copy', 'error');
-                });
+                navigator.clipboard.writeText(text).then(() => showToast(`Copied info for ${villager.id}`)).catch(err => showToast('Failed to copy', 'error'));
             };
 
-            // --- Smart Tag Generator & ID Logic ---
             const generateSmartTag = (text) => {
                 if (!text) return 'XXX';
                 const cleanText = text.replace(/\s+(?:X|IX|VI{0,3}|IV|I{1,3})$/i, '').trim();
                 const lowerText = cleanText.toLowerCase();
-                
-                // 1. Check Overrides
                 const overrideKey = Object.keys(tagOverrides).find(k => k.toLowerCase() === lowerText);
                 if (overrideKey) return tagOverrides[overrideKey];
-                
-                // 2. Check Generic Map
-                const genericMap = {
-                    'shovel': 'SVL', 'pickaxe': 'PCK', 'axe': 'AXE', 'hoe': 'HOE', 'sword': 'SWD',
-                    'helmet': 'HLM', 'chestplate': 'CPL', 'leggings': 'LEG', 'boots': 'BTS', 'fishing rod': 'ROD',
-                    'book': 'BOK', 'potion': 'POT', 'arrow': 'ARR'
-                };
-                for (const [key, code] of Object.entries(genericMap)) {
-                    if (lowerText.includes(key)) return code;
-                }
-
-                // 3. Multi-word Acronym (New Logic: "Golden Carrot" -> "GLD")
+                const genericMap = { 'shovel': 'SVL', 'pickaxe': 'PCK', 'axe': 'AXE', 'hoe': 'HOE', 'sword': 'SWD', 'helmet': 'HLM', 'chestplate': 'CPL', 'leggings': 'LEG', 'boots': 'BTS', 'fishing rod': 'ROD', 'book': 'BOK', 'potion': 'POT', 'arrow': 'ARR' };
+                for (const [key, code] of Object.entries(genericMap)) { if (lowerText.includes(key)) return code; }
                 const words = cleanText.split(' ');
-                if (words.length > 1) {
-                    let acronym = words.map(w => w[0]).join('').toUpperCase();
-                    if (acronym.length === 2) {
-                        const lastWord = words[1].replace(/[aeiou]/gi, '');
-                        if (lastWord.length > 1) acronym += lastWord[1].toUpperCase();
-                        else acronym += 'X';
-                    }
-                    if (acronym.length >= 3) return acronym.substring(0, 3);
-                }
-
-                // 4. Default Vowel Strip
+                if (words.length > 1) { let acronym = words.map(w => w[0]).join('').toUpperCase(); if (acronym.length === 2) { const lastWord = words[1].replace(/[aeiou]/gi, ''); acronym += (lastWord.length > 1 ? lastWord[1].toUpperCase() : 'X'); } if (acronym.length >= 3) return acronym.substring(0, 3); }
                 const firstChar = cleanText.charAt(0);
                 const rest = cleanText.slice(1).replace(/[aeiou]/gi, '');
-                const combined = firstChar + rest;
-                const code = combined.length >= 2 ? combined : cleanText;
-                return code.substring(0, 3).toUpperCase();
+                return (firstChar + rest).substring(0, 3).toUpperCase() || cleanText.substring(0,3).toUpperCase();
             };
 
             const getPrefix = (profession, tradeTag) => {
                 if (!profession) return 'XXX-XXX';
-                const professionMap = {
-                    'Farmer': 'FRM', 'Cleric': 'CLE', 'Toolsmith': 'TSM', 'Weaponsmith': 'WSM',
-                    'Armorer': 'ARM', 'Fletcher': 'FLE', 'Librarian': 'LIB', 'Fisherman': 'FSH', 'Shepherd': 'SHP'
-                };
+                const professionMap = { 'Farmer': 'FRM', 'Cleric': 'CLE', 'Toolsmith': 'TSM', 'Weaponsmith': 'WSM', 'Armorer': 'ARM', 'Fletcher': 'FLE', 'Librarian': 'LIB', 'Fisherman': 'FSH', 'Shepherd': 'SHP' };
                 const profCode = professionMap[profession] || profession.substring(0, 3).toUpperCase();
                 const tCode = (tradeTag && tradeTag.length >= 2) ? tradeTag.substring(0, 3).toUpperCase() : 'XXX';
                 return `${profCode}-${tCode}`;
             };
 
-            // Calculate Max ID + 1 for new entries
             const getNextSequenceNumber = () => {
                 let maxNum = 0;
-                villagers.forEach(v => {
-                    const match = v.id.match(/-(\d{3})$/);
-                    if (match) {
-                        const num = parseInt(match[1], 10);
-                        if (num > maxNum) maxNum = num;
-                    }
-                });
+                villagers.forEach(v => { const match = v.id.match(/-(\d{3})$/); if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; } });
                 return maxNum + 1;
             };
 
             const generateId = (profession, tradeTag, excludeId = null, specificNum = null) => {
                 if (!profession) return '';
                 const prefix = getPrefix(profession, tradeTag);
-                
                 if (specificNum !== null) return `${prefix}-${specificNum.toString().padStart(3, '0')}`;
                 if (forceIdNumber !== null) return `${prefix}-${forceIdNumber.toString().padStart(3, '0')}`;
-
-                const allNumbers = villagers.filter(v => v.id !== excludeId).map(v => {
-                    const match = v.id.match(/-(\d{3})$/);
-                    return match ? parseInt(match[1], 10) : null;
-                }).filter(n => n !== null);
-                
+                const allNumbers = villagers.filter(v => v.id !== excludeId).map(v => { const match = v.id.match(/-(\d{3})$/); return match ? parseInt(match[1], 10) : null; }).filter(n => n !== null);
                 const nextNum = allNumbers.length > 0 ? Math.max(...allNumbers) + 1 : 1;
                 return `${prefix}-${nextNum.toString().padStart(3, '0')}`;
             };
@@ -508,219 +354,92 @@
             }, [newVillager.type, tradeCode, villagers, forceIdNumber]);
 
             // --- Handlers ---
-            
             const handleVacancySelection = (num) => {
-                if (editingId) {
-                    setForceIdNumber(num);
-                    const newId = generateId(newVillager.type, tradeCode, editingId, num);
-                    setNewVillager(prev => ({...prev, id: newId}));
-                    setIsIdPickerOpen(false);
-                } else {
-                    openNewVillagerForm(num);
-                }
+                if (editingId) { setForceIdNumber(num); const newId = generateId(newVillager.type, tradeCode, editingId, num); setNewVillager(prev => ({...prev, id: newId})); setIsIdPickerOpen(false); } 
+                else { openNewVillagerForm(num); }
+            };
+            
+            const handleGlobalVacancyClick = (num) => {
+                setIsVacancyOpen(false);
+                const exists = villagers.find(v => v.id.endsWith(`-${num.toString().padStart(3,'0')}`));
+                if (exists) { setSearchTerm(exists.id); showToast(`Filtered to ${exists.id}`); } 
+                else { openNewVillagerForm(num); }
             };
 
-            const handleLogButtonPress = () => {
-                const data = getVacancyData();
-                const hasOpenings = data.some(s => s.status !== 'active');
-                
-                if (hasOpenings) {
-                    setIsIdPickerOpen(true);
-                } else {
-                    openNewVillagerForm(null);
-                }
-            };
+            const handleLogButtonPress = () => { const data = getVacancyData(); const hasOpenings = data.some(s => s.status !== 'active'); if (hasOpenings) setIsIdPickerOpen(true); else openNewVillagerForm(null); };
 
             const openNewVillagerForm = (preFilledNumber) => {
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
-                setTradeCode('');
-                setEditingId(null);
-                setEditingTradeIndex(null);
-                setForceIdNumber(preFilledNumber);
-                setIsFormOpen(true);
-                setIsIdPickerOpen(false);
+                setTradeCode(''); setEditingId(null); setEditingTradeIndex(null); setForceIdNumber(preFilledNumber);
+                setIsFormOpen(true); setIsIdPickerOpen(false);
             };
 
             const handleEditClick = (villager) => {
                 setNewVillager({ ...villager });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
                 const parts = villager.id.split('-');
-                if (parts.length === 3) setTradeCode(parts[1]);
-                else setTradeCode('');
-                setEditingId(villager.id);
-                setEditingTradeIndex(null);
-                setForceIdNumber(null);
+                if (parts.length === 3) setTradeCode(parts[1]); else setTradeCode('');
+                setEditingId(villager.id); setEditingTradeIndex(null); setForceIdNumber(null);
                 setIsFormOpen(true);
             };
 
-            const handleRegenerateId = () => {
-                const generated = generateId(newVillager.type, tradeCode, editingId);
-                setNewVillager(prev => ({ ...prev, id: generated }));
-            };
-
+            const handleRegenerateId = () => { const generated = generateId(newVillager.type, tradeCode, editingId); setNewVillager(prev => ({ ...prev, id: generated })); };
             const toggleStar = (index) => {
                 const updatedTrades = newVillager.trades.map((t, i) => ({ ...t, isStarred: i === index }));
-                const targetTrade = updatedTrades[index];
-                if (targetTrade.isStarred) {
-                    const smartCode = generateSmartTag(targetTrade.item);
-                    setTradeCode(smartCode);
-                }
+                if (updatedTrades[index].isStarred) setTradeCode(generateSmartTag(updatedTrades[index].item));
                 setNewVillager({ ...newVillager, trades: updatedTrades });
             };
 
             const handleAddTrade = (e) => {
                 e.preventDefault();
                 if (!tempTrade.item || !tempTrade.price) return;
-                
                 let autoCode = null;
-                if (editingTradeIndex === null && !tradeCode && newVillager.trades.length === 0) {
-                    autoCode = generateSmartTag(tempTrade.item);
-                    setTradeCode(autoCode);
-                }
-
-                const tradeToAdd = { 
-                    ...tempTrade,
-                    costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '',
-                    resultQty: tempTrade.resultQty || 1,
-                    isStarred: autoCode ? true : false
-                };
-
-                if (editingTradeIndex !== null) {
-                    const updatedTrades = [...newVillager.trades];
-                    updatedTrades[editingTradeIndex] = tradeToAdd;
-                    setNewVillager({ ...newVillager, trades: updatedTrades });
-                    setEditingTradeIndex(null);
-                } else {
-                    setNewVillager({ ...newVillager, trades: [...newVillager.trades, tradeToAdd] });
-                }
-                
+                if (editingTradeIndex === null && !tradeCode && newVillager.trades.length === 0) { autoCode = generateSmartTag(tempTrade.item); setTradeCode(autoCode); }
+                const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: autoCode ? true : false };
+                if (editingTradeIndex !== null) { const updatedTrades = [...newVillager.trades]; updatedTrades[editingTradeIndex] = tradeToAdd; setNewVillager({ ...newVillager, trades: updatedTrades }); setEditingTradeIndex(null); } 
+                else { setNewVillager({ ...newVillager, trades: [...newVillager.trades, tradeToAdd] }); }
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
                 document.getElementById('trade-item-input').focus();
             };
 
-            const handleEditTradeClick = (index) => {
-                setTempTrade(newVillager.trades[index]);
-                setEditingTradeIndex(index);
-                document.getElementById('trade-item-input').focus();
-            };
-
-            const handleCancelTradeEdit = () => {
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
-                setEditingTradeIndex(null);
-            };
-
-            const removeTempTrade = (index) => {
-                if (editingTradeIndex === index) handleCancelTradeEdit();
-                else if (editingTradeIndex !== null && index < editingTradeIndex) setEditingTradeIndex(editingTradeIndex - 1);
-                const updatedTrades = newVillager.trades.filter((_, i) => i !== index);
-                setNewVillager({ ...newVillager, trades: updatedTrades });
-            };
+            const handleEditTradeClick = (index) => { setTempTrade(newVillager.trades[index]); setEditingTradeIndex(index); document.getElementById('trade-item-input').focus(); };
+            const handleCancelTradeEdit = () => { setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' }); setEditingTradeIndex(null); };
+            const removeTempTrade = (index) => { if (editingTradeIndex === index) handleCancelTradeEdit(); else if (editingTradeIndex !== null && index < editingTradeIndex) setEditingTradeIndex(editingTradeIndex - 1); const updatedTrades = newVillager.trades.filter((_, i) => i !== index); setNewVillager({ ...newVillager, trades: updatedTrades }); };
 
             const handleSaveVillager = (e) => {
                 e.preventDefault();
-                
                 let finalTrades = [...newVillager.trades];
                 if (tempTrade.item && tempTrade.price) {
-                     const tradeToAdd = { 
-                        ...tempTrade,
-                        costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '',
-                        resultQty: tempTrade.resultQty || 1,
-                        isStarred: !tradeCode && finalTrades.length === 0 
-                    };
-                    if (editingTradeIndex !== null) finalTrades[editingTradeIndex] = tradeToAdd;
-                    else finalTrades.push(tradeToAdd);
+                     const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: !tradeCode && finalTrades.length === 0 };
+                    if (editingTradeIndex !== null) finalTrades[editingTradeIndex] = tradeToAdd; else finalTrades.push(tradeToAdd);
                 }
-                
                 const finalId = editingId ? newVillager.id : generateId(newVillager.type, tradeCode);
-
-                // --- Duplicate Check ---
                 const isDuplicate = villagers.some(v => v.id === finalId && v.id !== editingId && v.status !== 'Terminated');
-                if (isDuplicate) {
-                    if (!confirm(`Warning: ID ${finalId} is already in use by an Active villager! Save anyway?`)) {
-                        return;
-                    }
-                }
+                if (isDuplicate && !confirm(`Warning: ID ${finalId} is already in use by an Active villager! Save anyway?`)) return;
 
                 let updatedList = [...villagers];
-
-                if (forceIdNumber !== null) {
-                    updatedList = updatedList.filter(v => {
-                        const match = v.id.match(/-(\d{3})$/);
-                        const num = match ? parseInt(match[1], 10) : null;
-                        return !(num === forceIdNumber && v.status === 'Terminated');
-                    });
-                }
-
-                if (editingId) {
-                    updatedList = updatedList.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v);
-                    setVillagers(updatedList);
-                    setEditingId(null);
-                    showToast("Villager updated successfully!");
-                } else {
-                    updatedList.push({ ...newVillager, id: finalId, trades: finalTrades, status: 'Active' });
-                    setVillagers(updatedList);
-                    showToast("New villager catalogued!");
-                }
-                
-                setLastUpdated(new Date().toISOString()); // Update timestamp
-
+                if (forceIdNumber !== null) { updatedList = updatedList.filter(v => { const match = v.id.match(/-(\d{3})$/); return !(match && parseInt(match[1], 10) === forceIdNumber && v.status === 'Terminated'); }); }
+                if (editingId) { updatedList = updatedList.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v); setVillagers(updatedList); setEditingId(null); showToast("Villager updated successfully!"); } 
+                else { updatedList.push({ ...newVillager, id: finalId, trades: finalTrades, status: 'Active' }); setVillagers(updatedList); showToast("New villager catalogued!"); }
+                setLastUpdated(new Date().toISOString());
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
-                setTradeCode('');
-                setEditingTradeIndex(null);
-                setForceIdNumber(null);
-                setIsFormOpen(false);
+                setTradeCode(''); setEditingTradeIndex(null); setForceIdNumber(null); setIsFormOpen(false);
             };
 
-            const toggleStatus = (id) => {
-                setVillagers(villagers.map(v => {
-                    if (v.id === id) {
-                        const newStatus = v.status === 'Active' ? 'Terminated' : 'Active';
-                        showToast(`Status changed to ${newStatus}`);
-                        return { ...v, status: newStatus };
-                    }
-                    return v;
-                }));
-                setLastUpdated(new Date().toISOString()); // Update timestamp
-            };
-
-            const deleteVillager = (id) => {
-                if (confirm('Are you sure you want to delete this record permanently?')) {
-                    setVillagers(villagers.filter(v => v.id !== id));
-                    setLastUpdated(new Date().toISOString()); // Update timestamp
-                    showToast("Record permanently deleted.", "error");
-                }
-            };
-
-            const handleClearAllData = () => {
-                if (confirm('WARNING: This will permanently delete ALL villager records. Are you sure?')) {
-                    if (confirm('Final check: This action cannot be undone. Delete everything?')) {
-                        setVillagers([]);
-                        setManualDeaths(0);
-                        setLastUpdated(new Date().toISOString()); // Update timestamp
-                        showToast('All data cleared.', 'error');
-                        setIsSettingsOpen(false);
-                    }
-                }
-            };
-
-            const handleVacancyClick = (num) => { setIsVacancyOpen(false); openNewVillagerForm(num); };
+            const toggleStatus = (id) => { setVillagers(villagers.map(v => { if (v.id === id) { const newStatus = v.status === 'Active' ? 'Terminated' : 'Active'; showToast(`Status changed to ${newStatus}`); return { ...v, status: newStatus }; } return v; })); setLastUpdated(new Date().toISOString()); };
+            const deleteVillager = (id) => { if (confirm('Are you sure you want to delete this record permanently?')) { setVillagers(villagers.filter(v => v.id !== id)); setLastUpdated(new Date().toISOString()); showToast("Record permanently deleted.", "error"); } };
+            const handleClearAllData = () => { if (confirm('WARNING: This will permanently delete ALL villager records. Are you sure?')) { if (confirm('Final check: This action cannot be undone. Delete everything?')) { setVillagers([]); setManualDeaths(0); setLastUpdated(new Date().toISOString()); showToast('All data cleared.', 'error'); setIsSettingsOpen(false); } } };
             const handleAddOverride = (e) => { e.preventDefault(); if(newTagKey && newTagValue) { setTagOverrides(prev => ({...prev, [newTagKey]: newTagValue.toUpperCase()})); setNewTagKey(''); setNewTagValue(''); showToast(`Tag added: ${newTagValue.toUpperCase()}`); } };
             const handleDeleteOverride = (key) => { const newTags = {...tagOverrides}; delete newTags[key]; setTagOverrides(newTags); };
 
             const handleExport = () => {
-                const data = { villagers, manualDeaths, tagOverrides, exportDate: new Date().toISOString(), version: "1.1" };
-                const dataStr = JSON.stringify(data, null, 2);
-                const blob = new Blob([dataStr], { type: "application/json" });
+                const data = { villagers, manualDeaths, tagOverrides, exportDate: new Date().toISOString(), version: "1.1", themeId };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `sandwich-club-villagers-${new Date().toISOString().slice(0,10)}.json`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                const link = document.createElement('a'); link.href = url; link.download = `sandwich-club-villagers-${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
                 showToast("Data exported successfully!");
             };
 
@@ -731,54 +450,31 @@
                 reader.onload = (event) => {
                     try {
                         const imported = JSON.parse(event.target.result);
-                        if (imported.villagers && Array.isArray(imported.villagers)) {
-                            if (confirm(`Load ${imported.villagers.length} villagers? This overwrites current list.`)) {
-                                setVillagers(imported.villagers);
-                                if (imported.manualDeaths !== undefined) setManualDeaths(imported.manualDeaths);
-                                if (imported.tagOverrides) setTagOverrides(prev => ({...prev, ...imported.tagOverrides}));
-                                setLastUpdated(new Date().toISOString()); // Update timestamp
-                                showToast("Import successful!");
+                        if ((imported.villagers && Array.isArray(imported.villagers)) || Array.isArray(imported)) {
+                            if (confirm(`Load data? This overwrites current list.`)) {
+                                setVillagers(Array.isArray(imported) ? imported : imported.villagers);
+                                if (!Array.isArray(imported)) {
+                                    if (imported.manualDeaths !== undefined) setManualDeaths(imported.manualDeaths);
+                                    if (imported.tagOverrides) setTagOverrides(prev => ({...prev, ...imported.tagOverrides}));
+                                    if (imported.themeId) setThemeId(imported.themeId);
+                                }
+                                setLastUpdated(new Date().toISOString()); showToast("Import successful!");
                             }
-                        } else if (Array.isArray(imported)) {
-                            if (confirm(`Load ${imported.length} villagers? This overwrites current list.`)) {
-                                setVillagers(imported);
-                                setLastUpdated(new Date().toISOString()); // Update timestamp
-                                showToast("Import successful!");
-                            }
-                        } else {
-                            showToast("Invalid file format.", "error");
-                        }
-                    } catch (err) {
-                        showToast("Error parsing file.", "error");
-                    }
+                        } else showToast("Invalid file format.", "error");
+                    } catch (err) { showToast("Error parsing file.", "error"); }
                 };
-                reader.readAsText(file);
-                e.target.value = '';
+                reader.readAsText(file); e.target.value = '';
             };
 
             const handleCopySummary = () => {
-                const summary = villagers.filter(v => v.status === 'Active').map(v => {
-                    const trades = v.trades.map(t => {
-                        if (t.isBuy) return `Sell ${t.item}`;
-                        return `${t.resultQty && t.resultQty > 1 ? t.resultQty + 'x ' : ''}${t.item} (${t.price}e)`;
-                    }).join(', ');
-                    return `[${v.id}] ${v.location}: ${trades}`;
-                }).join('\n');
-                
-                navigator.clipboard.writeText(summary).then(() => {
-                    showToast("Full catalogue copied to clipboard!");
-                }).catch(() => {
-                    showToast("Failed to copy summary.", "error");
-                });
+                const summary = villagers.filter(v => v.status === 'Active').map(v => { const trades = v.trades.map(t => { if (t.isBuy) return `Sell ${t.item}`; return `${t.resultQty && t.resultQty > 1 ? t.resultQty + 'x ' : ''}${t.item} (${t.price}e)`; }).join(', '); return `[${v.id}] ${v.location}: ${trades}`; }).join('\n');
+                navigator.clipboard.writeText(summary).then(() => showToast("Full catalogue copied to clipboard!")).catch(() => showToast("Failed to copy summary.", "error"));
             };
 
             const getProcessedVillagers = () => {
                 let processed = villagers.filter(v => {
                     const hasTradeMatch = v.trades && v.trades.some(t => t.item.toLowerCase().includes(searchTerm.toLowerCase()));
-                    const matchesSearch = 
-                        v.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        v.notes.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        hasTradeMatch;
+                    const matchesSearch = v.id.toLowerCase().includes(searchTerm.toLowerCase()) || v.notes.toLowerCase().includes(searchTerm.toLowerCase()) || hasTradeMatch;
                     const matchesType = filterType === 'All' || v.type === filterType;
                     const matchesStatus = filterStatus === 'All' ? true : v.status === filterStatus;
                     const hasRelevantTrade = v.trades && v.trades.some(t => activeTab === 'buy' ? !t.isBuy : t.isBuy);
@@ -800,38 +496,20 @@
             const filteredAndSortedVillagers = getProcessedVillagers();
             const recordedDeaths = villagers.filter(v => v.status === 'Terminated').length;
             const totalDeaths = recordedDeaths + manualDeaths;
-            
             const collectedEnchantmentCount = Object.keys(libraryData).length;
             const totalEnchantmentCount = ALL_ENCHANTMENTS.length;
             const collectionPercentage = Math.round((collectedEnchantmentCount / totalEnchantmentCount) * 100);
 
-            // --- Vacancy Calc ---
             const getVacancyData = () => {
                 const activeIds = new Set();
                 const terminatedIds = new Set();
                 let maxNum = 0;
-
-                villagers.forEach(v => {
-                    const match = v.id.match(/-(\d{3})$/);
-                    if (match) {
-                        const num = parseInt(match[1], 10);
-                        if (num > maxNum) maxNum = num;
-                        if (v.status === 'Active') activeIds.add(num);
-                        else terminatedIds.add(num);
-                    }
-                });
-
+                villagers.forEach(v => { const match = v.id.match(/-(\d{3})$/); if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; if (v.status === 'Active') activeIds.add(num); else terminatedIds.add(num); } });
                 const grid = [];
-                for (let i = 1; i <= maxNum; i++) {
-                    let status = 'empty';
-                    if (activeIds.has(i)) status = 'active';
-                    else if (terminatedIds.has(i)) status = 'terminated';
-                    grid.push({ num: i, status });
-                }
+                for (let i = 1; i <= maxNum; i++) { let status = 'empty'; if (activeIds.has(i)) status = 'active'; else if (terminatedIds.has(i)) status = 'terminated'; grid.push({ num: i, status }); }
                 return grid;
             };
 
-            // --- Validation & Styles ---
             const getValidationIssues = (villager) => {
                 const issues = [];
                 if (!/^[A-Z]{3}-[A-Z0-9]{3}-\d{3}$/.test(villager.id)) issues.push("Invalid ID Format");
@@ -840,656 +518,527 @@
             };
 
             const getStatusColor = (status) => {
+                const n = theme.neutral; const p = theme.primary;
                 switch(status) {
-                    case 'Active': return 'bg-purple-900/30 text-purple-300 border-purple-700'; 
-                    case 'Terminated': return 'bg-orange-900/20 text-orange-400 border-orange-700'; 
-                    case 'Missing': return 'bg-yellow-900/20 text-yellow-500 border-yellow-700';
-                    default: return 'bg-neutral-800 text-neutral-400';
+                    case 'Active': return `bg-${p}-900/20 text-${p}-300 border-${p}-800/50`; 
+                    case 'Terminated': return 'bg-orange-900/20 text-orange-400 border-orange-800/50'; 
+                    default: return `bg-${n}-800 text-${n}-400`;
                 }
             };
 
             const cartTotals = cart.reduce((acc, item) => {
                 const totalCost = item.price * item.qty;
-                if (!item.isBuy) {
-                    acc.emeraldsNeeded += totalCost;
-                    if (item.costItem) acc.itemsNeeded.push({ name: item.costItem, qty: (item.costQty || 1) * item.qty });
-                } else {
-                    acc.sellingItems.push({ name: item.item, qty: item.price * item.qty });
-                    acc.emeraldsGained += item.qty;
-                }
+                if (!item.isBuy) { acc.emeraldsNeeded += totalCost; if (item.costItem) acc.itemsNeeded.push({ name: item.costItem, qty: (item.costQty || 1) * item.qty }); } 
+                else { acc.sellingItems.push({ name: item.item, qty: item.price * item.qty }); acc.emeraldsGained += item.qty; }
                 return acc;
             }, { emeraldsNeeded: 0, emeraldsGained: 0, itemsNeeded: [], sellingItems: [] });
 
-            const consolidateItems = (arr) => {
-                const map = {};
-                arr.forEach(i => { map[i.name] = (map[i.name] || 0) + i.qty; });
-                return Object.entries(map).map(([name, qty]) => ({ name, qty }));
-            };
-
+            const consolidateItems = (arr) => { const map = {}; arr.forEach(i => { map[i.name] = (map[i.name] || 0) + i.qty; }); return Object.entries(map).map(([name, qty]) => ({ name, qty })); };
             const vacancyData = getVacancyData();
 
+            // --- Theme Dynamic Classes ---
+            const n = theme.neutral; // e.g., 'slate'
+            const p = theme.primary; // e.g., 'emerald'
+            const s = theme.secondary; // e.g., 'amber'
+            const a = theme.accent; // e.g., 'teal'
+
             return (
-                <div className="min-h-screen bg-black text-neutral-200 p-4 font-sans selection:bg-purple-500 selection:text-white">
-                    <div className="max-w-4xl mx-auto space-y-6">
-                        
-                        {/* Header */}
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-neutral-800 pb-4 gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold text-purple-400 tracking-tight">Sandwich Club SMP - Trading Hall</h1>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-                                    <p className="text-neutral-400 text-sm">Manage villagers for the Sandwich Club Survival Multiplayer Server.</p>
-                                    {lastUpdated && (
-                                        <span className="text-[10px] uppercase tracking-wider text-neutral-600 border border-neutral-800 px-2 py-0.5 rounded-full self-start sm:self-auto">
-                                            Last Updated: {new Date(lastUpdated).toLocaleString()}
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            
+                <div className={`selection-custom max-w-7xl mx-auto p-4 md:p-6 lg:p-8 pb-24 text-${n}-300`}>
+                    
+                    {/* Header */}
+                    <div className={`flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 border-b border-${n}-800/50 pb-6`}>
+                        <div>
+                            <h1 className={`text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-${p}-400 via-${a}-300 to-${a}-300 tracking-tight mb-2`}>Sandwich Club SMP</h1>
+                            <p className={`text-${n}-400 flex items-center gap-2`}>
+                                <span className={`inline-block w-2 h-2 rounded-full bg-${p}-500 animate-pulse`}></span>
+                                Villager Trading Hall
+                            </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
                             <div className="flex gap-2 items-center flex-wrap">
-                                <button onClick={() => setIsCartOpen(true)} className="bg-neutral-800 hover:bg-neutral-700 text-purple-400 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-purple-900/50 relative" title="Shopping Cart">
+                                <button onClick={() => setIsCartOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 hover:border-${p}-500/50 text-${p}-300 px-3 py-2 rounded-lg flex items-center justify-center transition-all border border-${n}-800 relative shadow-sm hover:shadow-${p}-900/20`} title="Shopping Cart">
                                     <ShoppingBag size={20} />
-                                    {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold">{cart.length}</span>}
+                                    {cart.length > 0 && <span className={`absolute -top-1 -right-1 bg-gradient-to-br from-${s}-500 to-orange-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full font-bold shadow-lg shadow-${s}-900/50`}>{cart.length}</span>}
                                 </button>
-                                <div className="w-px h-8 bg-neutral-800 mx-1 hidden md:block"></div>
-                                <button onClick={() => setIsLibraryOpen(true)} className="bg-neutral-900 hover:bg-neutral-800 text-blue-400 hover:text-blue-300 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="Enchantment Library">
+                                <div className={`w-px h-8 bg-${n}-800 mx-1 hidden md:block`}></div>
+                                <button onClick={() => setIsLibraryOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${a}-300 hover:text-${a}-200 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800 hover:border-${a}-500/30`} title="Enchantment Library">
                                     <BookOpen size={20} />
                                 </button>
-                                <button onClick={() => setIsGuideOpen(true)} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="User Guide"><HelpCircle size={20} /></button>
-                                <button onClick={() => setIsVacancyOpen(true)} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="View ID Vacancies"><GridIcon size={20} /></button>
-                                <button onClick={() => setIsSettingsOpen(true)} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-neutral-800" title="Settings / Tag Dictionary"><Settings size={20} /></button>
-                                <button onClick={handleLogButtonPress} className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-orange-900/50"><Plus size={20} /><span>Log Villager</span></button>
+                                <button onClick={() => setIsGuideOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${n}-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800`} title="User Guide"><HelpCircle size={20} /></button>
+                                <button onClick={() => setIsVacancyOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${n}-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800`} title="View ID Vacancies"><GridIcon size={20} /></button>
+                                <button onClick={() => setIsSettingsOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${n}-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800`} title="Settings"><Settings size={20} /></button>
+                                <button onClick={handleLogButtonPress} className={`bg-gradient-to-r from-${p}-600 to-${a}-600 hover:from-${p}-500 hover:to-${a}-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-${p}-900/20 font-medium border border-${p}-500/20`}><Plus size={20} /><span>Log Villager</span></button>
                             </div>
+                            {lastUpdated && <span className={`text-[10px] uppercase tracking-wider text-${n}-600 px-1 font-mono mt-1`}>Updated: {new Date(lastUpdated).toLocaleDateString()}</span>}
                         </div>
+                    </div>
 
-                        {/* Stats Summary */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                                <div className="text-neutral-500 text-xs uppercase tracking-wider">Total Records</div>
-                                <div className="text-2xl font-bold text-purple-400">{villagers.length}</div>
-                            </div>
-                            <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                                <div className="text-neutral-500 text-xs uppercase tracking-wider">Active Traders</div>
-                                <div className="text-2xl font-bold text-orange-400">{villagers.filter(v => v.status === 'Active').length}</div>
-                            </div>
-                            
-                            <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800 relative group select-none">
-                                <div className="text-neutral-500 text-xs uppercase tracking-wider flex justify-between">
-                                    <span>Terminated</span>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between`}>
+                            <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Total Records</div>
+                            <div className={`text-3xl font-mono font-bold text-${n}-200`}>{villagers.length}</div>
+                        </div>
+                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between relative overflow-hidden`}>
+                            <div className={`absolute top-0 right-0 w-16 h-16 bg-${p}-500/5 rounded-full blur-xl -mr-8 -mt-8`}></div>
+                            <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Active Traders</div>
+                            <div className={`text-3xl font-mono font-bold text-${p}-400`}>{villagers.filter(v => v.status === 'Active').length}</div>
+                        </div>
+                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between group select-none relative overflow-hidden`}>
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
+                            <div className="flex justify-between items-start">
+                                <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Casualties</div>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => setManualDeaths(d => d + 1)} className={`hover:bg-${n}-800 text-${n}-500 hover:text-white p-1 rounded`}><Plus size={12} /></button>
+                                    <button onClick={() => setManualDeaths(d => Math.max(0, d - 1))} className={`hover:bg-${n}-800 text-${n}-500 hover:text-white p-1 rounded`}><Minus size={12} /></button>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="text-2xl font-bold text-red-500">{totalDeaths}</div>
-                                    <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setManualDeaths(d => d + 1)} className="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 w-5 h-5 flex items-center justify-center rounded hover:text-white transition-colors" title="Add unrecorded death"><Plus size={12} /></button>
-                                        <button onClick={() => setManualDeaths(d => Math.max(0, d - 1))} className="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 w-5 h-5 flex items-center justify-center rounded hover:text-white transition-colors" title="Remove unrecorded death"><Minus size={12} /></button>
-                                    </div>
-                                </div>
                             </div>
-
-                            <div className="bg-neutral-900 p-3 rounded-lg border border-neutral-800">
-                                <div className="text-neutral-500 text-xs uppercase tracking-wider">Enchantments</div>
-                                <div className="text-2xl font-bold text-blue-400">{collectedEnchantmentCount}<span className="text-sm text-neutral-500 font-normal">/{totalEnchantmentCount}</span></div>
+                            <div className="text-3xl font-mono font-bold text-red-400">{totalDeaths}</div>
+                        </div>
+                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between relative overflow-hidden`}>
+                            <div className={`absolute top-0 right-0 w-16 h-16 bg-${a}-500/5 rounded-full blur-xl -mr-8 -mt-8`}></div>
+                            <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Library Progress</div>
+                            <div className="flex items-baseline gap-2">
+                                <span className={`text-3xl font-mono font-bold text-${a}-400`}>{collectedEnchantmentCount}</span>
+                                <span className={`text-sm text-${n}-600 font-mono`}>/{totalEnchantmentCount}</span>
+                            </div>
+                            <div className={`w-full bg-${n}-900 h-1 mt-2 rounded-full overflow-hidden`}>
+                                <div className={`bg-${a}-600 h-full rounded-full transition-all duration-1000`} style={{ width: `${collectionPercentage}%` }}></div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Tabs (Buy / Sell) */}
-                        <div className="flex space-x-1 bg-neutral-900 p-1 rounded-lg border border-neutral-800">
-                            <button onClick={() => setActiveTab('buy')} className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-bold transition-all ${activeTab === 'buy' ? 'bg-purple-700 text-white shadow-md' : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800'}`}><ShoppingBag size={16} /> Buy Items (Player Buys)</button>
-                            <button onClick={() => setActiveTab('sell')} className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-md text-sm font-bold transition-all ${activeTab === 'sell' ? 'bg-orange-700 text-white shadow-md' : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800'}`}><Coins size={16} /> Sell Items (Player Sells)</button>
+                    {/* Toolbar */}
+                    <div className="flex flex-col xl:flex-row gap-4 mb-6">
+                        <div className={`flex bg-${n}-900 p-1.5 rounded-xl border border-${n}-800 shrink-0`}>
+                            <button onClick={() => setActiveTab('buy')} className={`flex items-center gap-2 py-2 px-6 rounded-lg text-sm font-bold transition-all ${activeTab === 'buy' ? `bg-${p}-900/30 text-${p}-200 shadow-sm border border-${p}-500/20` : `text-${n}-500 hover:text-${n}-300 hover:bg-${n}-800/50`}`}>
+                                <ShoppingBag size={16} className={activeTab === 'buy' ? `text-${p}-400` : ""} /> Player Buys
+                            </button>
+                            <button onClick={() => setActiveTab('sell')} className={`flex items-center gap-2 py-2 px-6 rounded-lg text-sm font-bold transition-all ${activeTab === 'sell' ? `bg-${s}-900/30 text-${s}-200 shadow-sm border border-${s}-500/20` : `text-${n}-500 hover:text-${n}-300 hover:bg-${n}-800/50`}`}>
+                                <Coins size={16} className={activeTab === 'sell' ? `text-${s}-400` : ""} /> Player Sells
+                            </button>
                         </div>
-
-                        {/* Search, Filter & Sort */}
-                        <div className="flex flex-col md:flex-row gap-4 bg-neutral-900 p-4 rounded-lg border border-neutral-800">
+                        <div className={`flex flex-col md:flex-row gap-2 flex-1 bg-${n}-900 p-1.5 rounded-xl border border-${n}-800`}>
                             <div className="relative flex-1">
-                                <div className="absolute left-3 top-2.5 text-neutral-500"><Search size={20} /></div>
-                                <input ref={searchInputRef} type="text" placeholder={`Search trades in ${activeTab === 'buy' ? 'Buying' : 'Selling'}... (Ctrl+K)`} className="w-full bg-black border border-neutral-700 rounded-lg py-2 pl-10 pr-4 text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                <div className={`absolute left-3 top-2.5 text-${n}-500 pointer-events-none`}><Search size={18} /></div>
+                                <input ref={searchInputRef} type="text" placeholder="Search item, ID, or notes... (Ctrl+K)" className={`w-full bg-black/40 border border-${n}-800 hover:border-${n}-700 focus:border-${p}-500 rounded-lg py-2 pl-10 pr-4 text-${n}-200 placeholder-${n}-600 focus:outline-none focus:ring-1 focus:ring-${p}-500 transition-all h-full text-sm`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-                            
                             <div className="flex gap-2">
-                                <select className={`bg-black border border-neutral-700 rounded-lg px-4 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${filterStatus === 'Terminated' ? 'text-red-400 border-red-900' : ''}`} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} title="Filter by Status">
-                                    <option value="Active">Status: Active</option>
-                                    <option value="Terminated">Status: Terminated</option>
-                                    <option value="All">Status: All</option>
+                                <select className={`bg-black/40 border border-${n}-800 hover:border-${n}-700 rounded-lg px-3 py-2 text-${n}-300 focus:outline-none focus:ring-1 focus:ring-${p}-500 text-sm h-10 ${filterStatus === 'Terminated' ? 'text-red-400 border-red-900/30' : ''}`} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                                    <option value="Active">Active Only</option><option value="Terminated">Terminated</option><option value="All">All Status</option>
                                 </select>
-
-                                <select className="bg-black border border-neutral-700 rounded-lg px-4 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" value={filterType} onChange={(e) => setFilterType(e.target.value)} title="Filter by Type">
-                                    <option value="All">All Types</option>
-                                    <option value="Librarian">Librarian</option>
-                                    <option value="Fletcher">Fletcher</option>
-                                    <option value="Armorer">Armorer</option>
-                                    <option value="Cleric">Cleric</option>
-                                    <option value="Toolsmith">Toolsmith</option>
-                                    <option value="Weaponsmith">Weaponsmith</option>
-                                    <option value="Farmer">Farmer</option>
-                                    <option value="Mason">Mason</option>
-                                    <option value="Butcher">Butcher</option>
-                                    <option value="Fisherman">Fisherman</option>
+                                <select className={`bg-black/40 border border-${n}-800 hover:border-${n}-700 rounded-lg px-3 py-2 text-${n}-300 focus:outline-none focus:ring-1 focus:ring-${p}-500 text-sm h-10`} value={filterType} onChange={(e) => setFilterType(e.target.value)}>
+                                    <option value="All">All Types</option><option value="Librarian">Librarian</option><option value="Fletcher">Fletcher</option><option value="Armorer">Armorer</option><option value="Cleric">Cleric</option><option value="Toolsmith">Toolsmith</option><option value="Weaponsmith">Weaponsmith</option><option value="Farmer">Farmer</option><option value="Mason">Mason</option><option value="Butcher">Butcher</option><option value="Fisherman">Fisherman</option><option value="Shepherd">Shepherd</option>
                                 </select>
-
-                                <div className="relative">
-                                    <select className="bg-black border border-neutral-700 rounded-lg pl-8 pr-4 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-purple-500 appearance-none text-sm w-full h-full" value={sortType} onChange={(e) => setSortType(e.target.value)} title="Sort Order">
-                                        <option value="Newest">Newest First</option>
-                                        <option value="Oldest">Oldest First</option>
-                                        <option value="ID_ASC">ID (A-Z)</option>
-                                        <option value="ID_DESC">ID (Z-A)</option>
-                                        <option value="Type">Type (A-Z)</option>
+                                <div className="relative w-32 md:w-40">
+                                    <select className={`w-full bg-black/40 border border-${n}-800 hover:border-${n}-700 rounded-lg pl-8 pr-4 py-2 text-${n}-300 focus:outline-none focus:ring-1 focus:ring-${p}-500 appearance-none text-sm h-10`} value={sortType} onChange={(e) => setSortType(e.target.value)}>
+                                        <option value="Newest">Newest</option><option value="Oldest">Oldest</option><option value="ID_ASC">ID (A-Z)</option><option value="ID_DESC">ID (Z-A)</option><option value="Type">Type</option>
                                     </select>
-                                    <div className="absolute left-2.5 top-2.5 text-neutral-500 pointer-events-none"><ArrowUpDown size={14} /></div>
+                                    <div className={`absolute left-2.5 top-3 text-${n}-500 pointer-events-none`}><ArrowUpDown size={14} /></div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* List */}
-                        <div className="grid gap-4">
-                            {filteredAndSortedVillagers.length === 0 ? (
-                                <div className="text-center py-12 text-neutral-500 bg-neutral-900/50 rounded-lg border border-neutral-800 border-dashed">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="opacity-50"><Users size={48} /></div>
-                                        <p>No villagers found for this filter.</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                filteredAndSortedVillagers.map((villager) => {
-                                    const issues = getValidationIssues(villager);
-                                    const hasIssues = issues.length > 0;
-                                    
-                                    let containerClasses = "group relative rounded-lg p-4 border transition-all ";
-                                    if (villager.status === 'Terminated') containerClasses += "border-red-900/50 bg-neutral-900/30";
-                                    else if (hasIssues) containerClasses += "border-orange-500/50 bg-orange-900/10 hover:border-orange-400";
-                                    else containerClasses += "bg-neutral-900 border-neutral-800 hover:border-purple-500/50";
-
-                                    const visibleTrades = villager.trades ? villager.trades.filter(t => activeTab === 'buy' ? !t.isBuy : t.isBuy) : [];
-
-                                    return (
-                                        <div key={villager.id} className={containerClasses}>
-                                            <div className="flex flex-col md:flex-row justify-between gap-4">
-                                                {/* Left: ID & Main Info */}
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-3 mb-3">
-                                                        <div className="flex items-center bg-black rounded border border-neutral-700 overflow-hidden group/id cursor-pointer hover:border-purple-500 transition-colors" onClick={() => copyVillagerInfo(villager)} title="Click to copy to clipboard">
-                                                            {/* Replaced raw text with Badge Component */}
-                                                            <IdBadge id={villager.id} status={villager.status} />
-                                                            
-                                                            <div className="bg-neutral-900 px-2 py-1.5 border-l border-neutral-700 text-neutral-500 group-hover/id:text-white transition-colors h-full flex items-center">
-                                                                <Copy size={12} />
-                                                            </div>
+                    {/* Villager Cards Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {filteredAndSortedVillagers.length === 0 ? (
+                            <div className={`col-span-full py-16 text-center text-${n}-600 bg-${n}-900/30 rounded-2xl border border-${n}-800 border-dashed`}>
+                                <Users size={48} className="mx-auto mb-4 opacity-20" />
+                                <p className="text-lg font-medium">No villagers found.</p>
+                                <p className="text-sm mt-1">Try adjusting your filters or search terms.</p>
+                            </div>
+                        ) : (
+                            filteredAndSortedVillagers.map((villager) => {
+                                const issues = getValidationIssues(villager);
+                                const hasIssues = issues.length > 0;
+                                let containerClasses = "group relative rounded-xl p-5 border transition-all duration-300 ";
+                                if (villager.status === 'Terminated') containerClasses += "border-red-900/20 bg-gradient-to-br from-red-950/10 to-transparent opacity-75 grayscale-[0.5]";
+                                else if (hasIssues) containerClasses += `border-${s}-500/30 bg-${s}-950/10 hover:border-${s}-400`;
+                                else containerClasses += `bg-${n}-900/80 border-${n}-800 hover:border-${p}-500/40 hover:shadow-lg hover:shadow-${p}-900/10 hover:-translate-y-0.5`;
+                                const visibleTrades = villager.trades ? villager.trades.filter(t => activeTab === 'buy' ? !t.isBuy : t.isBuy) : [];
+                                return (
+                                    <div key={villager.id} className={containerClasses}>
+                                        <div className="flex flex-col h-full">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="cursor-pointer hover:brightness-125 transition-all" onClick={() => copyVillagerInfo(villager)} title="Click ID to copy details">
+                                                            <IdBadge id={villager.id} status={villager.status} size="normal" theme={theme} />
                                                         </div>
-
-                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${getStatusColor(villager.status)}`}>{villager.status}</span>
-                                                        
-                                                        {hasIssues && (
-                                                            <div className="flex items-center gap-1 text-xs text-orange-500 font-bold px-2 py-1 rounded bg-orange-900/20 border border-orange-500/30 cursor-help" title={issues.join(', ')}>
-                                                                <AlertTriangle size={14} /><span className="hidden sm:inline">Correction Needed</span>
-                                                            </div>
-                                                        )}
-
-                                                        <span className="flex items-center gap-1 text-sm text-neutral-400 ml-2"><Tag size={14} /> {villager.type}</span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(villager.status)}`}>{villager.status}</span>
                                                     </div>
-                                                    
-                                                    {/* Trades List */}
-                                                    <div className={`mb-4 rounded-md border p-2 ${villager.status === 'Terminated' ? 'bg-red-900/10 border-red-900/30' : 'bg-black/50 border-neutral-800'}`}>
-                                                        <div className="text-xs text-neutral-500 uppercase tracking-wider mb-2 font-semibold flex items-center gap-1">
-                                                            {activeTab === 'buy' ? <ShoppingBag size={12}/> : <Coins size={12} />} 
-                                                            {activeTab === 'buy' ? ' Buying From Villager' : ' Selling To Villager'}
-                                                        </div>
-                                                        
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                            {visibleTrades.length > 0 ? visibleTrades.map((t, idx) => {
-                                                                const isTradeMatch = searchTerm && t.item.toLowerCase().includes(searchTerm.toLowerCase());
-                                                                const isBestPrice = villager.status === 'Active' && bestPrices[t.item] === parseInt(t.price);
-
-                                                                return (
-                                                                    <div key={idx} className={`relative flex justify-between items-center text-sm px-2 py-1 rounded border transition-colors ${isTradeMatch ? 'bg-purple-900/40 border-purple-500 ring-1 ring-purple-500/50' : (villager.status === 'Terminated' ? 'bg-neutral-900/50 border-neutral-800 opacity-60' : 'bg-neutral-800 border-neutral-700')}`}>
-                                                                        {t.isBuy ? (
-                                                                             <>
-                                                                                <span className={`flex items-center gap-1 ${isTradeMatch ? "text-orange-200 font-bold" : "text-neutral-200"}`}>
-                                                                                    {t.isStarred && <Star size={10} fill="currentColor" className="text-orange-500" />} {t.price} {t.item}
-                                                                                </span>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    {isBestPrice && <div title="Best Selling Price" className="text-yellow-400"><Trophy size={14}/></div>}
-                                                                                    <div className="flex items-center gap-1 text-purple-400 font-mono"><ArrowRight size={12} /> 1 EM</div>
-                                                                                    <button onClick={() => addToCart(t, villager)} className="text-neutral-500 hover:text-white p-1" title="Add to Shopping List"><Plus size={14}/></button>
-                                                                                </div>
-                                                                             </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <span className={`flex items-center gap-1 ${isTradeMatch ? "text-purple-200 font-bold" : "text-neutral-200"}`}>
-                                                                                    {t.isStarred && <Star size={10} fill="currentColor" className="text-purple-500" />} 
-                                                                                    {t.resultQty && t.resultQty > 1 && <span className="font-mono text-purple-300 mr-1">{t.resultQty}×</span>}
+                                                    <div className={`flex items-center gap-2 text-sm text-${n}-400 pl-0.5`}>
+                                                        <span className={`font-semibold text-${n}-300`}>{villager.type}</span>
+                                                        <span className={`w-1 h-1 bg-${n}-600 rounded-full`}></span>
+                                                        <span className="flex items-center gap-1 text-xs"><MapPin size={12} /> {villager.location || "Unknown"}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleEditClick(villager)} className={`p-1.5 rounded hover:bg-${n}-800 text-${n}-500 hover:text-${a}-400 transition-colors`} title="Edit"><Pencil size={16} /></button>
+                                                    <button onClick={() => toggleStatus(villager.id)} className={`p-1.5 rounded hover:bg-${n}-800 transition-colors ${villager.status === 'Terminated' ? `text-${p}-400` : `text-${n}-500 hover:text-${p}-400`}`} title={villager.status === 'Terminated' ? "Revive" : "Terminate"}>{villager.status === 'Terminated' ? <Check size={16} /> : <Skull size={16} />}</button>
+                                                    <button onClick={() => deleteVillager(villager.id)} className={`p-1.5 rounded hover:bg-red-900/30 text-${n}-500 hover:text-red-400 transition-colors`} title="Delete"><Trash2 size={16} /></button>
+                                                </div>
+                                            </div>
+                                            <div className={`flex-1 rounded-lg border p-3 ${villager.status === 'Terminated' ? 'bg-red-900/5 border-red-900/10' : `bg-black/30 border-${n}-800/50`}`}>
+                                                {visibleTrades.length > 0 ? (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {visibleTrades.map((t, idx) => {
+                                                            const isTradeMatch = searchTerm && t.item.toLowerCase().includes(searchTerm.toLowerCase());
+                                                            const isBestPrice = villager.status === 'Active' && bestPrices[t.item] === parseInt(t.price);
+                                                            return (
+                                                                <div key={idx} className={`relative flex justify-between items-center text-sm px-3 py-2 rounded-md border transition-all ${isTradeMatch ? `bg-${p}-900/20 border-${p}-500/50` : `bg-${n}-900/40 border-${n}-800 hover:bg-${n}-800/60`}`}>
+                                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                                        {t.isStarred && <Star size={10} fill="currentColor" className={t.isBuy ? `text-${s}-500 shrink-0` : `text-${p}-500 shrink-0`} />}
+                                                                        <div className="truncate">
+                                                                            {t.isBuy ? (
+                                                                                <span className={isTradeMatch ? `text-${s}-200 font-medium` : `text-${n}-300`}>{t.item}</span>
+                                                                            ) : (
+                                                                                <span className={isTradeMatch ? `text-${p}-200 font-medium` : `text-${n}-300`}>
+                                                                                    {t.resultQty > 1 && <span className={`text-${n}-500 font-mono text-xs mr-1`}>{t.resultQty}x</span>}
                                                                                     {t.item}
                                                                                 </span>
-                                                                                <div className="flex items-center gap-3">
-                                                                                    <div className="text-right">
-                                                                                        <span className={`${villager.status === 'Terminated' ? 'text-red-400/70' : 'text-purple-400'} font-mono block leading-none`}>{t.price} <span className="text-[10px] opacity-70">EM</span></span>
-                                                                                        {t.costItem && <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">+ {t.costQty || 1} {t.costItem}</span>}
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        {isBestPrice && <div title="Best Price!" className="text-yellow-400"><Trophy size={14}/></div>}
-                                                                                        <button onClick={() => addToCart(t, villager)} className="text-neutral-500 hover:text-white p-1" title="Add to Shopping List"><Plus size={14}/></button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </>
-                                                                        )}
+                                                                            )}
+                                                                        </div>
                                                                     </div>
-                                                                );
-                                                            }) : (
-                                                                <span className="text-neutral-600 text-sm italic col-span-2">No matching trades in this category.</span>
-                                                            )}
-                                                        </div>
+                                                                    <div className="flex items-center gap-3 shrink-0">
+                                                                         <div className="text-right leading-none">
+                                                                            <div className={`font-mono text-${n}-400 font-bold`}>{t.price}<span className={`text-[10px] ml-0.5 font-normal text-${n}-600`}>EM</span></div>
+                                                                            {t.costItem && <div className={`text-[9px] text-${n}-500 mt-0.5`}>+ {t.costQty} {t.costItem}</div>}
+                                                                        </div>
+                                                                        <div className="flex items-center">
+                                                                            {isBestPrice && !t.isBuy && <div title="Best Price!" className="text-yellow-500/80 mr-2"><Trophy size={12}/></div>}
+                                                                            <button onClick={() => addToCart(t, villager)} className={`text-${n}-600 hover:text-white transition-colors`} title="Add to Cart"><Plus size={14}/></button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
-
-                                                    <div className="flex items-center gap-4 text-sm text-neutral-400 mt-2"><span className="flex items-center gap-1"><MapPin size={14} /> {villager.location || "Unknown Location"}</span></div>
-                                                </div>
-
-                                                <div className="flex md:flex-col justify-end gap-2 md:border-l border-neutral-800 md:pl-4">
-                                                    <button onClick={() => handleEditClick(villager)} className="p-2 rounded hover:bg-neutral-800 text-neutral-400 hover:text-blue-400 transition-colors" title="Edit Villager"><Pencil size={18} /></button>
-                                                    <button onClick={() => toggleStatus(villager.id)} className={`p-2 rounded hover:bg-neutral-800 transition-colors ${villager.status === 'Terminated' ? 'text-purple-400' : 'text-neutral-400 hover:text-purple-400'}`} title={villager.status === 'Terminated' ? "Revive" : "Mark as Terminated"}>{villager.status === 'Terminated' ? <Check size={18} /> : <Skull size={18} />}</button>
-                                                    <button onClick={() => deleteVillager(villager.id)} className="p-2 rounded hover:bg-red-900/30 text-neutral-400 hover:text-red-400 transition-colors" title="Delete"><Trash2 size={18} /></button>
-                                                </div>
+                                                ) : <div className={`text-center py-4 text-${n}-600 italic text-sm`}>No trades in this category.</div>}
                                             </div>
+                                            {villager.notes && (
+                                                <div className={`mt-3 text-xs text-${n}-500 truncate border-t border-${n}-800/50 pt-2 flex items-center gap-1`}>
+                                                    <span className={`w-1 h-1 bg-${n}-700 rounded-full`}></span> {villager.notes}
+                                                </div>
+                                            )}
                                         </div>
-                                    );
-                                })
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    {/* --- MODALS --- */}
+                    {(isLibraryOpen || isCartOpen || isSettingsOpen || isFormOpen || isIdPickerOpen || isVacancyOpen || isGuideOpen) && (
+                        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+                    )}
+
+                    {/* User Guide Modal */}
+                    {isGuideOpen && (
+                        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+                            <div className={`glass-panel w-full max-w-2xl rounded-2xl border border-${n}-700 shadow-2xl pointer-events-auto max-h-[85vh] overflow-y-auto`}>
+                                <div className={`flex justify-between items-center p-5 border-b border-${n}-700 bg-${n}-900/50 sticky top-0 backdrop-blur-md z-10`}>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><HelpCircle size={20}/> User Guide</h2>
+                                    <button onClick={() => setIsGuideOpen(false)} className={`text-${n}-400 hover:text-white p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
+                                </div>
+                                <div className={`p-6 space-y-6 text-sm text-${n}-300 leading-relaxed`}>
+                                    <section>
+                                        <h3 className={`text-${p}-400 font-bold mb-2 text-base`}>Adding Villagers</h3>
+                                        <p className="mb-2">Click the <span className={`font-bold text-${p}-400`}>+ Log Villager</span> button. The system will automatically generate a new ID based on the villager's profession and your trades.</p>
+                                        <ul className={`list-disc pl-5 space-y-1 text-${n}-400`}>
+                                            <li><span className="text-white">Starred Trades:</span> Mark a trade as "starred" to force the ID tag to match that item (e.g., Mending -> MND).</li>
+                                            <li><span className="text-white">Smart IDs:</span> IDs are formatted as PROF-TAG-NUM (e.g., LIB-MND-001).</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h3 className={`text-${p}-400 font-bold mb-2 text-base`}>Managing Vacancies</h3>
+                                        <p>If a villager dies or is removed, mark them as <span className="text-red-400 font-bold">Terminated</span> (Skull Icon). This preserves their history but removes them from active lists.</p>
+                                        <p className="mt-2">Use the <span className="text-white font-bold">Vacancy Grid</span> button to see all used ID numbers. You can fill "gaps" in the numbering sequence (terminated or deleted slots) by clicking an empty number.</p>
+                                    </section>
+                                    <section>
+                                        <h3 className={`text-${p}-400 font-bold mb-2 text-base`}>Shopping Cart</h3>
+                                        <p>Click the <span className="text-white"><Plus size={12} className="inline"/></span> icon next to any trade to add it to your cart. The cart calculates total Emeralds needed and items required for all selected trades.</p>
+                                    </section>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Vacancy Grid Modal */}
+                    {isVacancyOpen && (
+                        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+                            <div className={`glass-panel w-full max-w-3xl rounded-2xl border border-${n}-700 shadow-2xl pointer-events-auto max-h-[85vh] overflow-hidden flex flex-col`}>
+                                <div className={`flex justify-between items-center p-5 border-b border-${n}-700 bg-${n}-900/50 sticky top-0 backdrop-blur-md z-10`}>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2"><GridIcon size={20}/> ID Vacancy Grid</h2>
+                                    <button onClick={() => setIsVacancyOpen(false)} className={`text-${n}-400 hover:text-white p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
+                                </div>
+                                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                                    <div className="flex gap-4 mb-6 text-xs justify-center">
+                                        <div className="flex items-center gap-2"><span className={`w-3 h-3 rounded bg-${n}-800 border border-${n}-700`}></span> Empty</div>
+                                        <div className="flex items-center gap-2"><span className={`w-3 h-3 rounded bg-${p}-900/30 border border-${p}-500/50`}></span> Active</div>
+                                        <div className="flex items-center gap-2"><span className="w-3 h-3 rounded bg-red-900/30 border border-red-500/50"></span> Terminated</div>
+                                    </div>
+
+                                    <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                                        {vacancyData.map((slot) => {
+                                            let bgClass = `bg-${n}-800/30 border-${n}-700 text-${n}-500 hover:bg-white/10 hover:text-white`;
+                                            if (slot.status === 'active') bgClass = `bg-${p}-900/20 border-${p}-500/30 text-${p}-300 hover:bg-${p}-900/40`;
+                                            if (slot.status === 'terminated') bgClass = "bg-red-900/20 border-red-500/30 text-red-400 hover:bg-red-900/40";
+                                            return (
+                                                <button key={slot.num} onClick={() => handleGlobalVacancyClick(slot.num)} className={`aspect-square rounded-lg flex items-center justify-center font-mono text-sm border transition-all ${bgClass}`} title={slot.status === 'empty' ? 'Log new villager here' : `Slot occupied (${slot.status})`}>{slot.num.toString().padStart(3, '0')}</button>
+                                            )
+                                        })}
+                                        <button onClick={() => openNewVillagerForm(null)} className={`aspect-square rounded-lg flex items-center justify-center font-mono text-sm border border-dashed border-${n}-600 bg-transparent text-${n}-500 hover:text-white hover:border-white transition-all`} title="Next Sequence"><Plus size={16}/></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Library Modal */}
+                    {isLibraryOpen && (
+                         <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+                            <div className={`glass-panel w-full max-w-5xl max-h-[85vh] rounded-2xl border border-${n}-700 shadow-2xl flex flex-col pointer-events-auto animate-fade-in-up overflow-hidden`}>
+                                <div className={`flex justify-between items-center p-5 border-b border-${n}-700 bg-${n}-900/50`}>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-3"><div className={`p-2 bg-${a}-500/10 rounded-lg text-${a}-400`}><BookOpen size={20}/></div>Enchantment Library</h2>
+                                    <button onClick={() => setIsLibraryOpen(false)} className={`text-${n}-400 hover:text-white transition-colors p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
+                                </div>
+                                <div className="p-6 overflow-y-auto custom-scrollbar">
+                                    <div className={`mb-8 p-4 rounded-xl bg-gradient-to-r from-${a}-900/20 to-${p}-900/20 border border-${a}-500/10`}>
+                                        <div className="flex justify-between items-end mb-3">
+                                            <div className={`text-sm font-bold text-${a}-300 uppercase tracking-wider`}>Collection Progress</div>
+                                            <div className="text-2xl font-mono font-bold text-white">{collectedEnchantmentCount} <span className={`text-${n}-500 text-lg`}>/ {totalEnchantmentCount}</span></div>
+                                        </div>
+                                        <div className={`h-2 bg-${n}-900 rounded-full overflow-hidden`}>
+                                            <div className={`h-full bg-gradient-to-r from-${a}-500 to-${p}-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]`} style={{ width: `${collectionPercentage}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                        {ALL_ENCHANTMENTS.map(ench => {
+                                            const data = libraryData[ench];
+                                            return (
+                                                <div key={ench} className={`p-4 rounded-xl border flex flex-col justify-between h-28 transition-all relative overflow-hidden group ${data ? `bg-${n}-900/60 border-${a}-500/30 hover:border-${a}-400 hover:shadow-[0_4px_20px_rgba(20,184,166,0.1)]` : `bg-${n}-900/30 border-${n}-800 opacity-50 grayscale hover:opacity-70`}`}>
+                                                    {data && <div className={`absolute top-0 right-0 w-16 h-16 bg-${a}-500/10 rounded-bl-full -mr-8 -mt-8 pointer-events-none`}></div>}
+                                                    <div className="flex justify-between items-start z-10"><div className={`font-semibold text-sm ${data ? `text-${a}-100` : `text-${n}-500`}`}>{ench}</div>{data && <Check size={14} className={`text-${a}-400`} />}</div>
+                                                    {data ? (
+                                                        <div className="z-10 mt-auto"><div className="flex items-end justify-between"><div className={`text-xs text-${n}-400 flex flex-col`}><span className={`font-mono text-[10px] text-${n}-500`}>{data.villagerId}</span><span className="flex items-center gap-1"><MapPin size={10} /> {data.location}</span></div><div className={`font-mono font-bold text-${a}-300 bg-${a}-900/30 px-2 py-1 rounded text-sm border border-${a}-500/20`}>{data.price} <span className="text-[10px]">EM</span></div></div></div>
+                                                    ) : <div className="flex-1 flex items-center justify-center opacity-10"><BookOpen size={24} /></div>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ID Picker Modal (For Editing) */}
+                    {isIdPickerOpen && (
+                        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+                            <div className={`glass-panel w-full max-w-2xl rounded-2xl border border-${n}-700 shadow-2xl p-6 relative pointer-events-auto`}>
+                                <button onClick={() => setIsIdPickerOpen(false)} className={`absolute top-4 right-4 text-${n}-400 hover:text-white p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
+                                <h2 className="text-2xl font-bold text-white mb-1">{editingId ? 'Reassign ID Number' : 'Select ID Number'}</h2>
+                                <p className={`text-${n}-400 text-sm mb-6`}>Choose a vacant slot or generate the next logical number.</p>
+                                <div className="space-y-6">
+                                    <div>
+                                        <div className="flex justify-between items-center mb-3"><h3 className={`text-xs font-bold text-${n}-500 uppercase tracking-wider`}>Vacant Slots</h3><span className={`text-xs text-${n}-600`}>{vacancyData.filter(s => s.status !== 'active').length} Available</span></div>
+                                        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                                            {vacancyData.filter(s => s.status !== 'active').map((slot) => (
+                                                <button key={slot.num} onClick={() => handleVacancySelection(slot.num)} className={`aspect-square rounded-lg flex items-center justify-center font-mono text-sm border transition-all ${slot.status === 'terminated' ? 'bg-red-900/10 border-red-900/40 text-red-400 hover:bg-red-900/30 hover:border-red-500' : `bg-${n}-800/30 border-dashed border-${n}-700 text-${n}-500 hover:bg-${p}-600 hover:border-${p}-500 hover:text-white`}`} title={slot.status === 'terminated' ? `Reclaim Terminated Slot #${slot.num}` : `Fill Empty Slot #${slot.num}`}>{slot.num.toString().padStart(3, '0')}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className={`pt-6 border-t border-${n}-800`}>
+                                        <button onClick={() => { if(editingId) handleVacancySelection(null); else openNewVillagerForm(null); }} className={`w-full bg-gradient-to-r from-${p}-700 to-${a}-700 hover:from-${p}-600 hover:to-${a}-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-lg shadow-${p}-900/30 group`}><span>Generate Next Sequence</span><span className={`bg-black/30 px-3 py-1 rounded text-${p}-100 font-mono group-hover:bg-black/40`}>#{getNextSequenceNumber().toString().padStart(3, '0')}</span></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Cart Modal */}
+                    <div className={`fixed inset-y-0 right-0 z-50 w-full md:w-[450px] bg-[${theme.bgBase}] border-l border-${n}-800 shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col ${isCartOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                        <div className={`flex justify-between items-center p-6 border-b border-${n}-800 bg-${n}-900/50`}>
+                            <h2 className="text-xl font-bold text-white flex items-center gap-3"><div className={`p-2 bg-${p}-500/10 rounded-lg text-${p}-400`}><ShoppingBag size={20}/></div>Shopping List</h2>
+                            <button onClick={() => setIsCartOpen(false)} className={`text-${n}-500 hover:text-white p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                            {cart.length === 0 ? (
+                                <div className={`h-full flex flex-col items-center justify-center text-${n}-600`}><div className={`w-16 h-16 bg-${n}-900 rounded-full flex items-center justify-center mb-4`}><ShoppingBag size={24} className="opacity-50"/></div><p className="font-medium">Your cart is empty.</p><p className="text-sm mt-1">Add items from the catalogue.</p></div>
+                            ) : (
+                                cart.map(item => (
+                                    <div key={item.uniqueId} className={`bg-${n}-900/40 p-4 rounded-xl border border-${n}-800 flex flex-col gap-3 group hover:border-${n}-700 transition-colors`}>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <div className={`font-bold text-sm mb-1 ${item.isBuy ? `text-${s}-300` : `text-${p}-300`}`}>{item.isBuy ? 'Sell' : 'Buy'} {item.item}</div>
+                                                <div className={`text-xs text-${n}-500 flex items-center gap-1 font-mono`}><span className={`text-${n}-600`}>{item.villagerId}</span> <span>•</span> {item.location}</div>
+                                            </div>
+                                            <button onClick={() => removeFromCart(item.uniqueId)} className={`text-${n}-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity`}><X size={16}/></button>
+                                        </div>
+                                        <div className={`flex justify-between items-center bg-black/40 p-2 rounded-lg border border-${n}-800/50`}>
+                                            <div className={`text-xs text-${n}-400 font-mono`}>{item.isBuy ? `${item.price} items = 1 Em` : `${item.price} Em` + (item.costItem ? ` + ${item.costQty} ${item.costItem}` : '')}</div>
+                                            <div className="flex items-center gap-3"><button onClick={() => updateCartQty(item.uniqueId, -1)} className={`hover:bg-${n}-700 w-5 h-5 rounded flex items-center justify-center text-${n}-400 hover:text-white transition-colors`}><Minus size={12}/></button><span className="text-sm font-mono font-bold w-4 text-center">{item.qty}</span><button onClick={() => updateCartQty(item.uniqueId, 1)} className={`hover:bg-${n}-700 w-5 h-5 rounded flex items-center justify-center text-${n}-400 hover:text-white transition-colors`}><Plus size={12}/></button></div>
+                                        </div>
+                                    </div>
+                                ))
                             )}
                         </div>
-
-                        {/* Enchantment Library Modal */}
-                        {isLibraryOpen && (
-                             <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-                                <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-4xl shadow-2xl my-8 flex flex-col max-h-[90vh]">
-                                    <div className="flex justify-between items-center p-4 border-b border-neutral-700 sticky top-0 bg-neutral-900 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><BookOpen size={20} className="text-blue-400"/> Enchantment Library</h2>
-                                        <button onClick={() => setIsLibraryOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    </div>
-                                    
-                                    <div className="p-6 overflow-y-auto">
-                                        {/* Progress Bar */}
-                                        <div className="mb-8">
-                                            <div className="flex justify-between items-end mb-2">
-                                                <div className="text-sm font-bold text-neutral-400 uppercase tracking-wider">Collection Progress</div>
-                                                <div className="text-2xl font-bold text-blue-400">{collectedEnchantmentCount} <span className="text-neutral-600 text-lg">/ {totalEnchantmentCount}</span></div>
-                                            </div>
-                                            <div className="h-3 bg-neutral-800 rounded-full overflow-hidden">
-                                                <div className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-1000" style={{ width: `${collectionPercentage}%` }}></div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                            {ALL_ENCHANTMENTS.map(ench => {
-                                                const data = libraryData[ench];
-                                                return (
-                                                    <div 
-                                                        key={ench} 
-                                                        className={`
-                                                            p-3 rounded border flex flex-col justify-between min-h-[100px] transition-colors
-                                                            ${data 
-                                                                ? 'bg-blue-900/20 border-blue-500/50 hover:bg-blue-900/30' 
-                                                                : 'bg-neutral-900/50 border-neutral-800 opacity-60 grayscale hover:opacity-80 hover:grayscale-0'
-                                                            }
-                                                        `}
-                                                    >
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <div className={`font-bold text-sm ${data ? 'text-blue-200' : 'text-neutral-500'}`}>{ench}</div>
-                                                            {data 
-                                                                ? <Check size={16} className="text-blue-400" /> 
-                                                                : <span className="text-neutral-700 text-xs">Missing</span>
-                                                            }
-                                                        </div>
-
-                                                        {data ? (
-                                                            <div className="text-xs space-y-1">
-                                                                <div className="flex items-center justify-between text-blue-300">
-                                                                    <span>Best Price:</span>
-                                                                    <span className="font-mono font-bold bg-blue-900/50 px-1.5 rounded border border-blue-500/30">{data.price} Em</span>
-                                                                </div>
-                                                                <div className="text-neutral-400 truncate flex items-center gap-1" title={`Sold by ${data.villagerId} in ${data.location}`}>
-                                                                    <MapPin size={10} /> {data.location}
-                                                                </div>
-                                                                <div className="text-[10px] text-neutral-500 mt-1 pt-1 border-t border-blue-500/20">
-                                                                    {data.fullItemName} ({data.villagerId})
-                                                                </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex-1 flex items-center justify-center">
-                                                                <div className="w-8 h-1 bg-neutral-800 rounded"></div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
+                        {cart.length > 0 && (
+                            <div className={`p-6 bg-${n}-900 border-t border-${n}-800 space-y-4 shadow-2xl z-10`}>
+                                <h3 className={`text-xs uppercase font-bold text-${n}-500 tracking-wider`}>Total Requirements</h3>
+                                <div className="space-y-2">
+                                    {cartTotals.emeraldsNeeded > 0 && (<div className={`flex justify-between items-center p-3 bg-${p}-900/10 rounded-lg border border-${p}-500/20`}><span className={`text-${p}-300 text-sm font-medium`}>Cost</span><span className={`font-mono font-bold text-${p}-200`}>{cartTotals.emeraldsNeeded} Emeralds</span></div>)}
+                                    {consolidateItems(cartTotals.itemsNeeded).map((i, idx) => (<div key={idx} className="flex justify-between items-center text-sm px-3"><span className={`text-${n}-400`}>{i.name}</span><span className={`font-mono font-bold text-${n}-300`}>{i.qty}</span></div>))}
+                                    {cartTotals.sellingItems.length > 0 && (<div className={`pt-2 mt-2 border-t border-${n}-800`}><div className="flex justify-between items-center p-3 bg-green-900/10 rounded-lg border border-green-500/20 mb-2"><span className="text-green-300 text-sm font-medium">Profit</span><span className="font-mono font-bold text-green-200">+{cartTotals.emeraldsGained} Emeralds</span></div>{consolidateItems(cartTotals.sellingItems).map((i, idx) => (<div key={idx} className={`flex justify-between items-center text-sm px-3 text-${s}-200/70`}><span>Sell {i.name}</span><span className="font-mono">{i.qty}</span></div>))}</div>)}
                                 </div>
+                                <button onClick={() => setCart([])} className={`w-full border border-${n}-700 hover:border-red-800 hover:bg-red-900/10 text-${n}-400 hover:text-red-400 py-3 rounded-lg text-sm transition-colors mt-2`}>Clear List</button>
                             </div>
                         )}
+                    </div>
 
-                        {/* ID Picker Modal (New) */}
-                        {isIdPickerOpen && (
-                            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-                                <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-lg shadow-2xl p-6 relative">
-                                    <button onClick={() => setIsIdPickerOpen(false)} className="absolute top-4 right-4 text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    <h2 className="text-2xl font-bold text-white mb-1">{editingId ? 'Assign New ID to Villager' : 'Assign Identification Number'}</h2>
-                                    <p className="text-neutral-400 text-sm mb-6">Choose an ID number for this villager.</p>
-
-                                    <div className="space-y-6">
-                                        {/* Vacancies Section */}
-                                        <div>
-                                            <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-3">Fill Vacancy</h3>
-                                            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                                                {vacancyData.filter(s => s.status !== 'active').map((slot) => (
-                                                    <button 
-                                                        key={slot.num}
-                                                        onClick={() => handleVacancySelection(slot.num)}
-                                                        className={`
-                                                            aspect-square rounded flex items-center justify-center font-mono text-sm border transition-all
-                                                            ${slot.status === 'terminated' ? 'bg-red-900/20 border-red-600 text-red-400 hover:bg-red-900/40' : 
-                                                              'bg-neutral-800/50 border-dashed border-neutral-600 text-neutral-400 hover:bg-neutral-700 hover:text-white'}
-                                                        `}
-                                                        title={slot.status === 'terminated' ? `Reclaim Terminated Slot #${slot.num}` : `Fill Empty Slot #${slot.num}`}
-                                                    >
-                                                        {slot.num.toString().padStart(3, '0')}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* New Sequence Section */}
-                                        <div className="pt-4 border-t border-neutral-800">
-                                            <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-3">Or Continue Sequence</h3>
-                                            <button 
-                                                onClick={() => {
-                                                    if(editingId) handleVacancySelection(null); // Just regenerate ID with next avail
-                                                    else openNewVillagerForm(null);
-                                                }}
-                                                className="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors group"
-                                            >
-                                                <span>Generate Next ID</span>
-                                                <span className="bg-purple-900 px-2 py-1 rounded text-purple-200 font-mono text-sm group-hover:bg-purple-800">
-                                                    #{getNextSequenceNumber().toString().padStart(3, '0')}
-                                                </span>
-                                            </button>
-                                        </div>
-                                    </div>
+                    {/* Settings Modal */}
+                    {isSettingsOpen && (
+                        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+                            <div className={`glass-panel w-full max-w-lg rounded-2xl border border-${n}-700 shadow-2xl pointer-events-auto max-h-[90vh] overflow-y-auto`}>
+                                <div className={`flex justify-between items-center p-5 border-b border-${n}-700 bg-${n}-900/50 sticky top-0 backdrop-blur-md z-10`}>
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-3"><Settings size={20} className={`text-${n}-400`}/> Settings</h2>
+                                    <button onClick={() => setIsSettingsOpen(false)} className={`text-${n}-400 hover:text-white p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
                                 </div>
-                            </div>
-                        )}
-
-                        {/* Modals & Toasts Container */}
-                        <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
-                            {toasts.map(t => (
-                                <div key={t.id} className={`toast-enter px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm font-bold ${t.type === 'error' ? 'bg-red-900/90 text-white border border-red-500' : 'bg-neutral-800/90 text-purple-400 border border-purple-500'}`}>
-                                    {t.type === 'error' ? <AlertTriangle size={16}/> : <Check size={16}/>}
-                                    {t.message}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Shopping Cart Modal */}
-                        {isCartOpen && (
-                            <div className="fixed inset-0 bg-black/70 flex items-center justify-end z-50 backdrop-blur-sm">
-                                <div className="bg-neutral-900 border-l border-neutral-700 w-full max-w-md h-full shadow-2xl flex flex-col slide-in-right">
-                                    <div className="flex justify-between items-center p-4 border-b border-neutral-700 bg-neutral-900">
-                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><ShoppingBag size={20} /> Shopping List</h2>
-                                        <button onClick={() => setIsCartOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    </div>
-                                    
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                        {cart.length === 0 ? (
-                                            <div className="text-center py-10 text-neutral-500">
-                                                <ShoppingBag size={48} className="mx-auto mb-2 opacity-50"/>
-                                                <p>Your cart is empty.</p>
-                                                <p className="text-xs">Add items from the main list!</p>
-                                            </div>
-                                        ) : (
-                                            cart.map(item => (
-                                                <div key={item.uniqueId} className="bg-black p-3 rounded border border-neutral-800 flex flex-col gap-2">
-                                                    <div className="flex justify-between items-start">
-                                                        <div>
-                                                            <div className="text-purple-300 font-bold">
-                                                                {item.isBuy 
-                                                                    ? `Selling ${item.item}` 
-                                                                    : `Buying ${item.resultQty > 1 ? item.resultQty + ' ' : ''}${item.item}`}
-                                                            </div>
-                                                            <div className="text-xs text-neutral-500 flex items-center gap-1"><MapPin size={10}/> {item.location} ({item.villagerId})</div>
-                                                        </div>
-                                                        <button onClick={() => removeFromCart(item.uniqueId)} className="text-neutral-500 hover:text-red-400"><Trash2 size={16}/></button>
-                                                    </div>
-                                                    
-                                                    <div className="flex justify-between items-center bg-neutral-900 p-2 rounded">
-                                                        <div className="text-xs text-neutral-400">
-                                                            {item.isBuy 
-                                                                ? `${item.price} items -> 1 Em` 
-                                                                : `${item.price} Em` + (item.costItem ? ` + ${item.costQty} ${item.costItem}` : '')}
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <button onClick={() => updateCartQty(item.uniqueId, -1)} className="bg-neutral-800 hover:bg-neutral-700 w-6 h-6 rounded flex items-center justify-center text-xs"><Minus size={12}/></button>
-                                                            <span className="w-8 text-center font-mono">{item.qty}</span>
-                                                            <button onClick={() => updateCartQty(item.uniqueId, 1)} className="bg-neutral-800 hover:bg-neutral-700 w-6 h-6 rounded flex items-center justify-center text-xs"><Plus size={12}/></button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-
-                                    {/* Cart Totals Footer */}
-                                    {cart.length > 0 && (
-                                        <div className="p-4 bg-neutral-900 border-t border-neutral-700 space-y-3">
-                                            <h3 className="text-sm uppercase font-bold text-neutral-500">Requirements Summary</h3>
-                                            
-                                            {/* Emeralds Needed */}
-                                            {cartTotals.emeraldsNeeded > 0 && (
-                                                <div className="flex justify-between items-center text-purple-300">
-                                                    <span>Total Emeralds Cost:</span>
-                                                    <span className="font-mono font-bold text-lg">{cartTotals.emeraldsNeeded}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Items to Bring (For Buy trades with secondary cost) */}
-                                            {consolidateItems(cartTotals.itemsNeeded).map((i, idx) => (
-                                                <div key={idx} className="flex justify-between items-center text-neutral-300 text-sm">
-                                                    <span>Total {i.name} Needed:</span>
-                                                    <span className="font-mono font-bold">{i.qty}</span>
-                                                </div>
+                                <div className="p-5 space-y-8">
+                                    {/* THEME SELECTOR */}
+                                    <div>
+                                        <h3 className={`text-xs font-bold text-${n}-500 uppercase tracking-wider mb-3`}>Visual Theme</h3>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {Object.values(THEMES).map(t => (
+                                                <button 
+                                                    key={t.id}
+                                                    onClick={() => setThemeId(t.id)}
+                                                    className={`
+                                                        p-3 rounded-xl border flex flex-col items-center gap-2 transition-all
+                                                        ${themeId === t.id 
+                                                            ? `bg-${t.neutral}-800 border-${t.primary}-500 ring-1 ring-${t.primary}-500/50` 
+                                                            : `bg-${n}-900/50 border-${n}-800 hover:bg-${n}-800`
+                                                        }
+                                                    `}
+                                                >
+                                                    <div className={`w-full h-8 rounded-lg bg-gradient-to-br from-${t.primary}-500 to-${t.accent}-500 opacity-80`}></div>
+                                                    <span className={`text-xs font-bold ${themeId === t.id ? 'text-white' : `text-${n}-500`}`}>{t.name}</span>
+                                                </button>
                                             ))}
-
-                                            {/* Selling Section */}
-                                            {cartTotals.sellingItems.length > 0 && (
-                                                <div className="pt-2 border-t border-neutral-800 mt-2">
-                                                    <div className="text-xs text-orange-400 mb-1">To Sell:</div>
-                                                    {consolidateItems(cartTotals.sellingItems).map((i, idx) => (
-                                                        <div key={idx} className="flex justify-between items-center text-neutral-300 text-sm">
-                                                            <span>{i.name}:</span>
-                                                            <span className="font-mono font-bold">{i.qty}</span>
-                                                        </div>
-                                                    ))}
-                                                    <div className="flex justify-between items-center text-green-400 mt-2 font-bold">
-                                                        <span>Profit (Emeralds):</span>
-                                                        <span>+{cartTotals.emeraldsGained}</span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            <button onClick={() => setCart([])} className="w-full bg-neutral-800 hover:bg-red-900/30 text-neutral-400 hover:text-red-300 py-2 rounded text-sm mt-2 transition-colors">Clear List</button>
                                         </div>
-                                    )}
+                                    </div>
+
+                                    <div>
+                                        <h3 className={`text-xs font-bold text-${n}-500 uppercase tracking-wider mb-3`}>ID Tag Dictionary</h3>
+                                        <form onSubmit={handleAddOverride} className="flex gap-2 mb-3"><input placeholder="Item Name (e.g. Diamond Hoe)" className={`flex-1 bg-black/40 border border-${n}-700 rounded-lg p-2.5 text-white text-sm focus:border-${p}-500 outline-none placeholder-${n}-600`} value={newTagKey} onChange={e => setNewTagKey(e.target.value)} /><input placeholder="TAG" maxLength={3} className={`w-20 bg-black/40 border border-${n}-700 rounded-lg p-2.5 text-white text-sm focus:border-${p}-500 outline-none uppercase font-mono text-center`} value={newTagValue} onChange={e => setNewTagValue(e.target.value.toUpperCase())} /><button type="submit" className={`bg-${n}-800 hover:bg-${n}-700 text-white p-2.5 rounded-lg border border-${n}-700`}><Plus size={20}/></button></form>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                            {Object.entries(tagOverrides).map(([key, value]) => (
+                                                <div key={key} className={`flex justify-between items-center bg-${n}-900/50 p-3 rounded-lg border border-${n}-800`}><span className={`text-${n}-300 text-sm`}>{key}</span><div className="flex items-center gap-3"><span className={`font-mono text-${p}-400 font-bold bg-${p}-900/10 px-2 rounded`}>{value}</span><button onClick={() => handleDeleteOverride(key)} className={`text-${n}-600 hover:text-red-400`}><Trash2 size={16}/></button></div></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className={`pt-6 border-t border-${n}-800`}>
+                                        <h3 className={`text-xs font-bold text-${n}-500 uppercase tracking-wider mb-3`}>Data Management</h3>
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <button onClick={handleExport} className={`bg-${n}-800 hover:bg-${n}-700 text-${n}-200 p-4 rounded-xl flex flex-col items-center justify-center gap-2 border border-${n}-700 transition-colors`}><Download size={20} className={`text-${a}-400`} /> <span className="text-sm font-medium">Export Data</span></button>
+                                            <button onClick={() => fileInputRef.current.click()} className={`bg-${n}-800 hover:bg-${n}-700 text-${n}-200 p-4 rounded-xl flex flex-col items-center justify-center gap-2 border border-${n}-700 transition-colors`}><Upload size={20} className="text-green-400" /> <span className="text-sm font-medium">Import Data</span></button>
+                                            <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
+                                        </div>
+                                        <button onClick={handleCopySummary} className={`w-full bg-${a}-900/10 hover:bg-${a}-900/20 text-${a}-300 border border-${a}-800/30 p-3 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-medium`}><Copy size={16} /> Copy Text Summary to Clipboard</button>
+                                    </div>
+                                    <div className={`pt-6 border-t border-${n}-800`}>
+                                        <button onClick={handleClearAllData} className="w-full bg-red-900/10 hover:bg-red-900/20 text-red-400 border border-red-900/30 p-3 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-bold"><Trash2 size={16} /> Delete All Data</button>
+                                    </div>
                                 </div>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {/* Settings Modal */}
-                        {isSettingsOpen && (
-                            <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-                                <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-lg shadow-2xl my-8">
-                                    <div className="flex justify-between items-center p-4 border-b border-neutral-700 sticky top-0 bg-neutral-900 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><Settings size={20} /> Settings & Data</h2>
-                                        <button onClick={() => setIsSettingsOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    </div>
-                                    <div className="p-4 space-y-6">
-                                        
-                                        {/* Tag Dictionary */}
+                    {/* Add/Edit Modal */}
+                    {isFormOpen && (
+                        <div className="fixed inset-0 flex items-center justify-center p-4 z-50 pointer-events-none">
+                            <div className={`glass-panel w-full max-w-xl rounded-2xl border border-${n}-700 shadow-2xl pointer-events-auto max-h-[90vh] overflow-y-auto`}>
+                                <div className={`flex justify-between items-center p-5 border-b border-${n}-700 bg-${n}-900/50 sticky top-0 backdrop-blur-md z-10`}>
+                                    <h2 className="text-xl font-bold text-white">{editingId ? 'Edit Villager' : 'Log New Villager'}</h2>
+                                    <button onClick={() => setIsFormOpen(false)} className={`text-${n}-400 hover:text-white p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
+                                </div>
+                                <form onSubmit={handleSaveVillager} className="p-6 space-y-6">
+                                    <div className={`bg-black/40 p-4 rounded-xl border border-${p}-500/20 flex items-center justify-between shadow-inner`}>
                                         <div>
-                                            <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-2">Tag Dictionary</h3>
-                                            <p className="text-xs text-neutral-400 mb-2">Define custom shorthands for trade tags.</p>
-                                            <form onSubmit={handleAddOverride} className="flex gap-2 bg-black/50 p-2 rounded border border-neutral-700 mb-2">
-                                                <input placeholder="Item Name" className="flex-1 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none" value={newTagKey} onChange={e => setNewTagKey(e.target.value)} />
-                                                <input placeholder="Code (HLM)" maxLength={3} className="w-20 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none uppercase font-mono" value={newTagValue} onChange={e => setNewTagValue(e.target.value.toUpperCase())} />
-                                                <button type="submit" className="bg-orange-600 hover:bg-orange-500 text-white p-2 rounded"><Plus size={20}/></button>
-                                            </form>
-                                            <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                                                {Object.entries(tagOverrides).map(([key, value]) => (
-                                                    <div key={key} className="flex justify-between items-center bg-black p-2 rounded border border-neutral-700">
-                                                        <span className="text-neutral-200 text-sm">{key}</span>
-                                                        <div className="flex items-center gap-3"><span className="font-mono text-purple-400 font-bold">{value}</span><button onClick={() => handleDeleteOverride(key)} className="text-neutral-500 hover:text-red-400"><Trash2 size={16}/></button></div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Data Management Section */}
-                                        <div className="pt-4 border-t border-neutral-700">
-                                            <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-wider mb-3">Share & Backup</h3>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <button onClick={handleExport} className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 p-3 rounded flex items-center justify-center gap-2 border border-neutral-600 transition-colors">
-                                                    <Download size={18} /> <span className="text-sm">Export File</span>
-                                                </button>
-                                                <button onClick={() => fileInputRef.current.click()} className="bg-neutral-800 hover:bg-neutral-700 text-neutral-200 p-3 rounded flex items-center justify-center gap-2 border border-neutral-600 transition-colors">
-                                                    <Upload size={18} /> <span className="text-sm">Import File</span>
-                                                </button>
-                                                <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
-                                            </div>
-                                            <button onClick={handleCopySummary} className="w-full mt-3 bg-blue-900/30 hover:bg-blue-900/50 text-blue-300 border border-blue-800 p-3 rounded flex items-center justify-center gap-2 transition-colors">
-                                                <Copy size={18} /> <span className="text-sm">Copy Catalogue Summary</span>
-                                            </button>
-                                            <p className="text-xs text-neutral-500 mt-2 text-center">Share the exported file or copied text with other players!</p>
-                                        </div>
-                                        
-                                        {/* Danger Zone */}
-                                        <div className="pt-4 border-t border-neutral-700">
-                                            <h3 className="text-red-400 font-bold mb-2 flex items-center gap-2"><AlertTriangle size={16}/> Danger Zone</h3>
-                                            <button 
-                                                onClick={handleClearAllData}
-                                                className="w-full bg-red-900/30 hover:bg-red-900/50 text-red-200 border border-red-800 p-3 rounded flex items-center justify-center gap-2 transition-colors"
-                                            >
-                                                <Trash2 size={18} /> Clear All Villager Data
-                                            </button>
-                                            <p className="text-xs text-neutral-500 mt-1 text-center">Permanently deletes all {villagers.length} records. This cannot be undone.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Add/Edit Modal */}
-                        {isFormOpen && (
-                            <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm overflow-y-auto">
-                                <div className="bg-neutral-900 rounded-xl border border-neutral-700 w-full max-w-lg shadow-2xl my-8">
-                                    <div className="flex justify-between items-center p-4 border-b border-neutral-700 sticky top-0 bg-neutral-900 rounded-t-xl z-10">
-                                        <h2 className="text-xl font-bold text-white">{editingId ? 'Edit Villager' : 'Log New Villager'}</h2>
-                                        <button onClick={() => setIsFormOpen(false)} className="text-neutral-400 hover:text-white"><X size={24} /></button>
-                                    </div>
-                                    
-                                    <form onSubmit={handleSaveVillager} className="p-4 space-y-4">
-                                        <div className="bg-black/80 p-3 rounded-lg border border-purple-500/30 flex items-center justify-between">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] uppercase text-neutral-500 tracking-wider font-bold">Generated ID Tag</span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-mono text-2xl text-purple-400 tracking-wider font-bold">{newVillager.id || '---'}</span>
-                                                    <button type="button" onClick={handleRegenerateId} className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-purple-400 rounded transition-colors border border-neutral-600" title="Regenerate ID"><RefreshCw size={16} /></button>
-                                                    {editingId && (
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={() => setIsIdPickerOpen(true)} 
-                                                            className="p-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-orange-400 rounded transition-colors border border-neutral-600"
-                                                            title="Pick Vacant ID"
-                                                        >
-                                                            <GridIcon size={16} />
-                                                        </button>
-                                                    )}
+                                            <span className={`text-[10px] uppercase text-${n}-500 tracking-wider font-bold block mb-1`}>Villager ID</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-mono text-2xl text-${p}-300 tracking-wider font-bold drop-shadow-sm`}>{newVillager.id || '---'}</span>
+                                                <div className="flex gap-1">
+                                                    <button type="button" onClick={handleRegenerateId} className={`p-1.5 bg-${n}-800 hover:bg-${n}-700 text-${n}-400 hover:text-white rounded border border-${n}-700`} title="Regenerate"><RefreshCw size={14} /></button>
+                                                    {editingId && <button type="button" onClick={() => setIsIdPickerOpen(true)} className={`p-1.5 bg-${n}-800 hover:bg-${n}-700 text-${n}-400 hover:text-orange-400 rounded border border-${n}-700`} title="Pick specific ID"><GridIcon size={14} /></button>}
                                                 </div>
-                                                {forceIdNumber !== null && !editingId && (
-                                                    <span className="text-xs text-orange-400 flex items-center gap-1 mt-1 animate-pulse">
-                                                        <AlertTriangle size={12}/> Filling Vacancy #{forceIdNumber.toString().padStart(3, '0')}
-                                                    </span>
-                                                )}
-                                                {forceIdNumber !== null && editingId && (
-                                                    <span className="text-xs text-purple-400 flex items-center gap-1 mt-1">
-                                                        <Check size={12}/> Reassigning to #{forceIdNumber.toString().padStart(3, '0')}
-                                                    </span>
-                                                )}
                                             </div>
-                                            <div className="text-right">
-                                                <div className="text-[10px] text-neutral-500 mb-1">Trade Tag (e.g. MND)</div>
-                                                <input maxLength={3} placeholder="XXX" className="w-16 bg-neutral-800 border border-neutral-600 rounded p-1 text-center text-white focus:border-purple-500 outline-none uppercase font-mono text-sm" value={tradeCode} onChange={e => setTradeCode(e.target.value.toUpperCase())} />
-                                            </div>
+                                            {forceIdNumber !== null && <div className="mt-1 text-xs text-orange-400 flex items-center gap-1 font-mono"><AlertTriangle size={10}/> Targeting Slot #{forceIdNumber}</div>}
                                         </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs uppercase text-neutral-400 mb-1">Profession</label>
-                                                <select className="w-full bg-neutral-900 border border-neutral-600 rounded p-2 text-white focus:border-purple-500 outline-none" value={newVillager.type} onChange={e => setNewVillager({...newVillager, type: e.target.value})}>
+                                        <div className="text-right">
+                                            <label className={`text-[10px] text-${n}-500 mb-1 block uppercase font-bold`}>Trade Tag</label>
+                                            <input maxLength={3} placeholder="XXX" className={`w-16 bg-${n}-800 border border-${n}-600 rounded-lg p-2 text-center text-white focus:border-${p}-500 outline-none uppercase font-mono text-sm`} value={tradeCode} onChange={e => setTradeCode(e.target.value.toUpperCase())} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Profession</label>
+                                            <div className="relative">
+                                                <select className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none appearance-none`} value={newVillager.type} onChange={e => setNewVillager({...newVillager, type: e.target.value})}>
                                                     <option>Librarian</option><option>Fletcher</option><option>Armorer</option><option>Cleric</option><option>Toolsmith</option><option>Weaponsmith</option><option>Farmer</option><option>Mason</option><option>Butcher</option><option>Fisherman</option>
                                                 </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs uppercase text-neutral-400 mb-1">Location</label>
-                                                <input placeholder="e.g. Hall A" className="w-full bg-neutral-900 border border-neutral-600 rounded p-2 text-white focus:border-purple-500 outline-none" value={newVillager.location} onChange={e => setNewVillager({...newVillager, location: e.target.value})} />
+                                                <div className={`absolute right-3 top-3.5 pointer-events-none text-${n}-500`}><ArrowUpDown size={14}/></div>
                                             </div>
                                         </div>
-
-                                        <div className="bg-black/50 p-3 rounded-lg border border-neutral-700">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <label className="block text-xs uppercase text-purple-400 font-bold flex items-center gap-2"><Coins size={14}/> {editingTradeIndex !== null ? 'Update Trade' : 'Add Trades'}</label>
-                                                <div className="flex items-center gap-2 bg-neutral-800 rounded p-1 border border-neutral-600">
-                                                    <button type="button" onClick={() => setTempTrade({...tempTrade, isBuy: false})} className={`text-xs px-2 py-1 rounded transition-colors ${!tempTrade.isBuy ? 'bg-purple-700 text-white' : 'text-neutral-400 hover:text-white'}`}>Player Buys</button>
-                                                    <button type="button" onClick={() => setTempTrade({...tempTrade, isBuy: true})} className={`text-xs px-2 py-1 rounded transition-colors ${tempTrade.isBuy ? 'bg-orange-700 text-white' : 'text-neutral-400 hover:text-white'}`}>Player Sells</button>
+                                        <div className="space-y-1">
+                                            <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Location</label>
+                                            <input placeholder="e.g. Hall A, Pod 3" className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none placeholder-${n}-600`} value={newVillager.location} onChange={e => setNewVillager({...newVillager, location: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div className={`bg-${n}-900/30 p-4 rounded-xl border border-${n}-700/50`}>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <label className={`text-xs uppercase text-${p}-400 font-bold flex items-center gap-2 tracking-wider`}><Coins size={14}/> {editingTradeIndex !== null ? 'Update Trade' : 'Add Trades'}</label>
+                                            <div className={`flex bg-${n}-900 rounded-lg p-1 border border-${n}-800`}>
+                                                <button type="button" onClick={() => setTempTrade({...tempTrade, isBuy: false})} className={`text-xs px-3 py-1.5 rounded-md transition-all font-medium ${!tempTrade.isBuy ? `bg-${p}-600 text-white shadow` : `text-${n}-500 hover:text-white`}`}>Buy</button>
+                                                <button type="button" onClick={() => setTempTrade({...tempTrade, isBuy: true})} className={`text-xs px-3 py-1.5 rounded-md transition-all font-medium ${tempTrade.isBuy ? `bg-${s}-600 text-white shadow` : `text-${n}-500 hover:text-white`}`}>Sell</button>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex gap-2">
+                                                {!tempTrade.isBuy && <input type="number" placeholder="Qty" className={`w-16 bg-black/40 border border-${n}-700 rounded-lg p-2.5 text-white text-sm focus:border-${p}-500 outline-none text-center placeholder-${n}-600 focus:ring-1 focus:ring-${p}-500`} value={tempTrade.resultQty || ''} onChange={e => setTempTrade({...tempTrade, resultQty: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />}
+                                                <input id="trade-item-input" placeholder={tempTrade.isBuy ? "Item to Sell" : "Result Item"} className={`flex-1 bg-black/40 border border-${n}-700 rounded-lg p-2.5 text-white text-sm focus:border-${p}-500 outline-none placeholder-${n}-600 focus:ring-1 focus:ring-${p}-500`} value={tempTrade.item} onChange={e => setTempTrade({...tempTrade, item: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                <div className="relative w-24">
+                                                    <input type="number" placeholder={tempTrade.isBuy ? "Qty" : "Cost"} className={`w-full bg-black/40 border border-${n}-700 rounded-lg p-2.5 pr-8 text-white text-sm focus:border-${p}-500 outline-none placeholder-${n}-600 focus:ring-1 focus:ring-${p}-500 text-right`} value={tempTrade.price} onChange={e => setTempTrade({...tempTrade, price: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                    <span className={`absolute right-2 top-2.5 text-xs text-${n}-500 font-mono pointer-events-none`}>{tempTrade.isBuy ? '' : 'EM'}</span>
                                                 </div>
                                             </div>
-                                            
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex gap-2">
-                                                    {!tempTrade.isBuy && (
-                                                        <input 
-                                                            type="number" 
-                                                            placeholder="Qty" 
-                                                            className="w-16 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none text-center"
-                                                            value={tempTrade.resultQty || ''} 
-                                                            onChange={e => setTempTrade({...tempTrade, resultQty: e.target.value})} 
-                                                            onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
-                                                        />
-                                                    )}
-                                                    <input id="trade-item-input" placeholder={tempTrade.isBuy ? "Item to Sell" : "Result Item"} className="flex-1 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none" value={tempTrade.item} onChange={e => setTempTrade({...tempTrade, item: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
-                                                    <input type="number" placeholder={tempTrade.isBuy ? "Qty" : "Cost (EM)"} className="w-24 bg-neutral-800 border border-neutral-600 rounded p-2 text-white text-sm focus:border-purple-500 outline-none" value={tempTrade.price} onChange={e => setTempTrade({...tempTrade, price: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
-                                                </div>
-                                                
-                                                {!tempTrade.isBuy && (
-                                                    <div className="flex gap-2 items-center">
-                                                        <div className="flex-1 flex gap-2">
-                                                             <input placeholder="Required Item (e.g. Book)" className="flex-1 bg-neutral-800 border border-neutral-700 rounded p-2 text-neutral-300 text-xs focus:border-purple-500 outline-none placeholder-neutral-600" value={tempTrade.costItem || ''} onChange={e => setTempTrade({...tempTrade, costItem: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
-                                                             <input type="number" placeholder="Qty" className="w-16 bg-neutral-800 border border-neutral-700 rounded p-2 text-neutral-300 text-xs focus:border-purple-500 outline-none placeholder-neutral-600" value={tempTrade.costQty || ''} onChange={e => setTempTrade({...tempTrade, costQty: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
-                                                        </div>
-                                                        <button type="button" onClick={handleAddTrade} className="bg-neutral-700 hover:bg-neutral-600 text-purple-400 p-2 rounded border border-neutral-600 self-stretch flex items-center" title="Add Trade"><Plus size={20} /></button>
+                                            {!tempTrade.isBuy ? (
+                                                <div className="flex gap-2 items-center">
+                                                    <div className={`flex-1 flex gap-2 items-center bg-black/20 p-1.5 rounded-lg border border-${n}-800`}>
+                                                         <span className={`text-[10px] text-${n}-500 font-bold uppercase ml-1`}>Plus:</span>
+                                                         <input placeholder="Item (e.g. Book)" className={`flex-1 bg-transparent border-none text-${n}-300 text-xs focus:ring-0 outline-none placeholder-${n}-600`} value={tempTrade.costItem || ''} onChange={e => setTempTrade({...tempTrade, costItem: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                         <div className={`w-px h-4 bg-${n}-700`}></div>
+                                                         <input type="number" placeholder="Qty" className={`w-12 bg-transparent border-none text-${n}-300 text-xs focus:ring-0 outline-none placeholder-${n}-600 text-right`} value={tempTrade.costQty || ''} onChange={e => setTempTrade({...tempTrade, costQty: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
                                                     </div>
-                                                )}
-                                                
-                                                {tempTrade.isBuy && (
-                                                    <button type="button" onClick={handleAddTrade} className="bg-neutral-700 hover:bg-neutral-600 text-orange-400 p-2 rounded border border-neutral-600 w-full flex items-center justify-center gap-2 font-bold text-sm" title="Add Trade"><Plus size={16} /> Add Selling Trade</button>
-                                                )}
-                                            </div>
-
-                                            {/* List of added trades in modal */}
+                                                    <button type="button" onClick={handleAddTrade} className={`bg-${n}-800 hover:bg-${n}-700 text-${p}-400 p-2.5 rounded-lg border border-${n}-700 self-stretch flex items-center justify-center transition-colors shadow-sm`} title="Confirm Trade"><Plus size={20} /></button>
+                                                </div>
+                                            ) : (
+                                                 <button type="button" onClick={handleAddTrade} className={`bg-${n}-800 hover:bg-${n}-700 text-${s}-400 p-2.5 rounded-lg border border-${n}-700 w-full flex items-center justify-center gap-2 font-bold text-sm transition-colors shadow-sm`} title="Confirm Trade"><Plus size={16} /> Add Selling Trade</button>
+                                            )}
                                             {newVillager.trades.length > 0 && (
-                                                <div className="space-y-1 mt-3 border-t border-neutral-700 pt-3">
+                                                <div className="space-y-2 mt-4 max-h-40 overflow-y-auto custom-scrollbar pr-1">
                                                     {newVillager.trades.map((t, i) => (
-                                                        <div key={i} className={`flex justify-between items-center px-3 py-1.5 rounded border text-sm transition-colors ${editingTradeIndex === i ? 'bg-purple-900/30 border-purple-500/50 ring-1 ring-purple-500/30' : 'bg-neutral-800 border-neutral-700'}`}>
-                                                            {t.isBuy ? <span className={editingTradeIndex === i ? "text-orange-200" : "text-neutral-300"}>Sell {t.price} {t.item}</span> : <span className={editingTradeIndex === i ? "text-purple-200" : "text-neutral-300"}>Buy {t.resultQty && t.resultQty > 1 ? `${t.resultQty} ` : ''}{t.item}</span>}
+                                                        <div key={i} className={`flex justify-between items-center px-3 py-2 rounded-lg border text-sm transition-all group ${editingTradeIndex === i ? `bg-${p}-900/20 border-${p}-500/40` : `bg-black/30 border-${n}-800 hover:border-${n}-700`}`}>
+                                                            <div className="flex items-center gap-2">
+                                                                <button type="button" onClick={() => toggleStar(i)} className={`transition-transform hover:scale-110 ${t.isStarred ? 'text-yellow-500' : `text-${n}-700 hover:text-yellow-500`}`}><Star size={14} fill={t.isStarred ? "currentColor" : "none"} /></button>
+                                                                {t.isBuy ? <span className={editingTradeIndex === i ? `text-${s}-300` : `text-${n}-400`}>Sell {t.price} {t.item}</span> : <span className={editingTradeIndex === i ? `text-${p}-300` : `text-${n}-300`}>Buy {t.resultQty && t.resultQty > 1 ? `${t.resultQty} ` : ''}{t.item}</span>}
+                                                            </div>
                                                             <div className="flex items-center gap-3">
-                                                                {t.isBuy ? <span className="text-purple-400 text-xs bg-purple-900/20 px-1 rounded">Gets 1 EM</span> : <div className="text-right"><div className="text-purple-400">{t.price} Em</div>{t.costItem && <div className="text-[10px] text-neutral-500">+ {t.costQty} {t.costItem}</div>}</div>}
-                                                                <div className="flex gap-1 items-center">
-                                                                    <button type="button" onClick={() => toggleStar(i)} className={`hover:scale-110 transition-transform ${t.isStarred ? 'text-yellow-400' : 'text-neutral-600 hover:text-yellow-400'}`} title="Star Trade"><Star size={16} fill={t.isStarred ? "currentColor" : "none"} /></button>
-                                                                    <div className="w-px h-3 bg-neutral-700 mx-1"></div>
-                                                                    <button type="button" onClick={() => handleEditTradeClick(i)} className="text-neutral-500 hover:text-blue-400"><Pencil size={14} /></button>
-                                                                    <button type="button" onClick={() => removeTempTrade(i)} className="text-neutral-500 hover:text-red-400"><X size={14} /></button>
+                                                                {t.isBuy ? <span className={`text-${p}-500 text-xs font-mono bg-${p}-900/10 px-1 rounded`}>1 EM</span> : <div className="text-right leading-none"><span className={`text-${p}-400 font-mono text-xs`}>{t.price} Em</span>{t.costItem && <div className={`text-[9px] text-${n}-500`}>+{t.costQty} {t.costItem}</div>}</div>}
+                                                                <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button type="button" onClick={() => handleEditTradeClick(i)} className={`text-${n}-500 hover:text-${a}-400 p-1`}><Pencil size={14} /></button>
+                                                                    <button type="button" onClick={() => removeTempTrade(i)} className={`text-${n}-500 hover:text-red-400 p-1`}><X size={14} /></button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1497,22 +1046,29 @@
                                                 </div>
                                             )}
                                         </div>
-
-                                        <div>
-                                            <label className="block text-xs uppercase text-neutral-400 mb-1">Notes</label>
-                                            <textarea placeholder="Additional info..." className="w-full bg-neutral-900 border border-neutral-600 rounded p-2 text-white focus:border-purple-500 outline-none h-16" value={newVillager.notes} onChange={e => setNewVillager({...newVillager, notes: e.target.value})} />
-                                        </div>
-
-                                        <button type="submit" className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2"><Save size={18} />{editingId ? 'Update Villager' : 'Save to Catalogue'}</button>
-                                    </form>
-                                </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Notes</label>
+                                        <textarea placeholder="Any special details..." className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none h-20 placeholder-${n}-600 resize-none`} value={newVillager.notes} onChange={e => setNewVillager({...newVillager, notes: e.target.value})} />
+                                    </div>
+                                    <button type="submit" className={`w-full bg-gradient-to-r from-${s}-600 to-orange-600 hover:from-${s}-500 hover:to-orange-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-${s}-900/20 flex justify-center items-center gap-2 transform active:scale-[0.99]`}><Save size={18} />{editingId ? 'Update Record' : 'Log Villager'}</button>
+                                </form>
                             </div>
-                        )}
+                        </div>
+                    )}
+
+                    {/* Toast Notification Container */}
+                    <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
+                        {toasts.map(t => (
+                            <div key={t.id} className={`toast-enter px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 text-sm font-semibold border backdrop-blur-md ${t.type === 'error' ? 'bg-red-950/90 text-red-200 border-red-800' : `bg-${n}-900/90 text-${p}-200 border-${p}-900`}`}>
+                                <div className={`p-1 rounded-full ${t.type === 'error' ? 'bg-red-500/20 text-red-400' : `bg-${p}-500/20 text-${p}-400`}`}>{t.type === 'error' ? <AlertTriangle size={14}/> : <Check size={14}/>}</div>
+                                {t.message}
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
         };
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<VillagerCatalogue />);
     </script>
