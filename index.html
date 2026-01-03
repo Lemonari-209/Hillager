@@ -69,20 +69,6 @@
 
         // --- CONSTANTS & CONFIGURATION ---
         
-        const ITEM_ICONS = {
-            "Emerald": "💎", "Diamond": "💠", "Iron Ingot": "⛓️", "Gold Ingot": "⚱️", 
-            "Stick": "🎋", "Paper": "📄", "Book": "📖", "Bookshelf": "📚", 
-            "Glass": "⬜", "White Wool": "🐑", "Rotten Flesh": "🥩", "String": "🕸️", 
-            "Coal": "⚫", "Charcoal": "🌑", "Wheat": "🌾", "Potato": "🥔", 
-            "Carrot": "🥕", "Beetroot": "🍠", "Pumpkin": "🎃", "Melon": "🍉", 
-            "Flint": "🔻", "Clay Ball": "🔘", "Stone": "🪨", "Granite": "🟤", 
-            "Arrow": "🏹", "Compass": "🧭", "Clock": "⏰", "Name Tag": "🏷️", 
-            "Saddle": "🏇", "Enchanted Book": "📘", "Lantern": "🏮", "Glowstone": "💡",
-            "Diamond Pickaxe": "⛏️", "Diamond Sword": "⚔️", "Diamond Axe": "🪓",
-            "Iron Pickaxe": "⛏️", "Iron Sword": "⚔️", "Shield": "🛡️",
-            "Fishing Rod": "🎣", "Bucket": "🪣"
-        };
-
         const VILLAGER_LEVELS = [
             { name: "Novice", color: "stone", icon: "1" },
             { name: "Apprentice", color: "orange", icon: "2" }, // Iron/Copper look
@@ -154,7 +140,7 @@
         const ShoppingBag = (props) => ( <IconBase {...props}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></IconBase> );
         const Star = (props) => ( <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase> );
         const RefreshCw = (props) => ( <IconBase {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconBase> );
-        const Settings = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase> );
+        const Settings = (props) => ( <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></IconBase> );
         const Copy = (props) => ( <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></IconBase> );
         const GridIcon = (props) => ( <IconBase {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></IconBase> );
         const HelpCircle = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase> );
@@ -163,6 +149,7 @@
         const Palette = (props) => ( <IconBase {...props}><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.55 0 1-.45 1-1 0-.28-.11-.53-.29-.71-.3-.3-.29-1.01.32-1.34.43-.23.78-.47 1.14-.71.55-.37 1.34-.82 2.83-.82 2.76 0 5-2.24 5-5s-2.24-5-5-5h-5c-.55 0-1 .45-1 1z"></path></IconBase> );
         const Sparkles = (props) => ( <IconBase {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></IconBase> );
         const Layers = (props) => ( <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></IconBase> );
+        const Filter = (props) => ( <IconBase {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></IconBase> );
 
         // --- Helper Component: Segmented ID Badge ---
         const IdBadge = ({ id, status, size = "normal", theme }) => {
@@ -245,9 +232,8 @@
                                 <div 
                                     key={i} 
                                     onClick={() => handleSuggestionClick(opt)}
-                                    className={`px-3 py-2 text-sm text-${n}-300 hover:bg-${n}-800 cursor-pointer flex items-center gap-2`}
+                                    className={`px-3 py-2 text-sm text-${n}-300 hover:bg-${n}-800 cursor-pointer`}
                                 >
-                                    {ITEM_ICONS[opt] && <span className="text-base">{ITEM_ICONS[opt]}</span>}
                                     {opt}
                                 </div>
                             ))}
@@ -354,6 +340,7 @@
             const [isCartOpen, setIsCartOpen] = useState(false);
             const [isIdPickerOpen, setIsIdPickerOpen] = useState(false); 
             const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+            const [showFilters, setShowFilters] = useState(false);
             
             const [editingId, setEditingId] = useState(null); 
             const [cart, setCart] = useState([]);
@@ -842,19 +829,18 @@
                                 <Coins size={16} className={activeTab === 'sell' ? `text-${s}-400` : ""} /> Player Sells
                             </button>
                         </div>
-                        <div className={`flex flex-col md:flex-row gap-2 flex-1 bg-${n}-900 p-1.5 rounded-xl border border-${n}-800`}>
-                            <div className="relative flex-1">
-                                <div className={`absolute left-3 top-2.5 text-${n}-500 pointer-events-none`}><Search size={18} /></div>
-                                <input ref={searchInputRef} type="text" placeholder="Search item, ID, or notes... (Ctrl+K)" className={`w-full bg-black/40 border border-${n}-800 hover:border-${n}-700 focus:border-${p}-500 rounded-lg py-2 pl-10 pr-4 text-${n}-200 placeholder-${n}-600 focus:outline-none focus:ring-1 focus:ring-${p}-500 transition-all h-full text-sm`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                            </div>
-                            <div className="flex gap-2">
-                                {/* PILL FILTER SECTION */}
-                                <div className="flex-1 overflow-x-auto no-scrollbar flex gap-2 items-center px-1">
-                                    <button onClick={() => setFilterType('All')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterType === 'All' ? `bg-${n}-700 text-white border-${n}-600` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}>All Types</button>
-                                    {PROFESSIONS.map(prof => (
-                                        <button key={prof} onClick={() => setFilterType(prof)} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterType === prof ? `bg-${p}-900/40 text-${p}-200 border-${p}-500/50` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}>{prof}</button>
-                                    ))}
+                        
+                        <div className={`flex flex-col gap-2 flex-1 bg-${n}-900 p-1.5 rounded-xl border border-${n}-800`}>
+                            <div className="flex gap-2 items-center">
+                                <div className="relative flex-1">
+                                    <div className={`absolute left-3 top-2.5 text-${n}-500 pointer-events-none`}><Search size={18} /></div>
+                                    <input ref={searchInputRef} type="text" placeholder="Search item, ID, or notes... (Ctrl+K)" className={`w-full bg-black/40 border border-${n}-800 hover:border-${n}-700 focus:border-${p}-500 rounded-lg py-2 pl-10 pr-4 text-${n}-200 placeholder-${n}-600 focus:outline-none focus:ring-1 focus:ring-${p}-500 transition-all h-10 text-sm`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                 </div>
+                                
+                                <button onClick={() => setShowFilters(!showFilters)} className={`h-10 px-3 rounded-lg border transition-all flex items-center justify-center gap-2 ${showFilters || filterType !== 'All' ? `bg-${p}-900/40 text-${p}-200 border-${p}-500/50` : `bg-black/40 border-${n}-800 text-${n}-400 hover:text-${n}-200 hover:border-${n}-600`}`} title="Toggle Filters">
+                                    <Filter size={18} />
+                                    <span className="hidden sm:inline text-xs font-bold">{filterType !== 'All' ? filterType : 'Filters'}</span>
+                                </button>
 
                                 <div className="relative w-32 md:w-40 shrink-0">
                                     <select className={`w-full bg-black/40 border border-${n}-800 hover:border-${n}-700 rounded-lg pl-8 pr-4 py-2 text-${n}-300 focus:outline-none focus:ring-1 focus:ring-${p}-500 appearance-none text-sm h-10`} value={sortType} onChange={(e) => setSortType(e.target.value)}>
@@ -863,6 +849,16 @@
                                     <div className={`absolute left-2.5 top-3 text-${n}-500 pointer-events-none`}><ArrowUpDown size={14} /></div>
                                 </div>
                             </div>
+
+                            {/* COLLAPSIBLE PILL FILTER SECTION */}
+                            {showFilters && (
+                                <div className="flex flex-wrap gap-2 items-center px-1 pb-1 pt-1 border-t border-${n}-800/50 animate-in fade-in slide-in-from-top-1">
+                                    <button onClick={() => setFilterType('All')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterType === 'All' ? `bg-${n}-700 text-white border-${n}-600` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}>All Types</button>
+                                    {PROFESSIONS.map(prof => (
+                                        <button key={prof} onClick={() => setFilterType(prof)} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterType === prof ? `bg-${p}-900/40 text-${p}-200 border-${p}-500/50` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}>{prof}</button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -918,11 +914,10 @@
                                                                         {t.isStarred && <Star size={10} fill="currentColor" className={t.isBuy ? `text-${s}-500 shrink-0` : `text-${p}-500 shrink-0`} />}
                                                                         <div className="truncate flex items-center gap-1.5">
                                                                             {t.isBuy ? (
-                                                                                <span className={isTradeMatch ? `text-${s}-200 font-medium` : `text-${n}-300`}>{ITEM_ICONS[t.item] && <span className="mr-1">{ITEM_ICONS[t.item]}</span>}{t.item}</span>
+                                                                                <span className={isTradeMatch ? `text-${s}-200 font-medium` : `text-${n}-300`}>{t.item}</span>
                                                                             ) : (
                                                                                 <span className={isTradeMatch ? `text-${p}-200 font-medium` : `text-${n}-300`}>
                                                                                     {t.resultQty > 1 && <span className={`text-${n}-500 font-mono text-xs mr-1`}>{t.resultQty}x</span>}
-                                                                                    {ITEM_ICONS[t.item] && <span className="mr-1">{ITEM_ICONS[t.item]}</span>}
                                                                                     {t.item}
                                                                                 </span>
                                                                             )}
