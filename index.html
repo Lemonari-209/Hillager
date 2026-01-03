@@ -122,7 +122,7 @@
         const ShoppingBag = (props) => ( <IconBase {...props}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></IconBase> );
         const Star = (props) => ( <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase> );
         const RefreshCw = (props) => ( <IconBase {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconBase> );
-        const Settings = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase> );
+        const Settings = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></IconBase> );
         const Copy = (props) => ( <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></IconBase> );
         const GridIcon = (props) => ( <IconBase {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></IconBase> );
         const HelpCircle = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase> );
@@ -242,7 +242,7 @@
             const [newVillager, setNewVillager] = useState({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
             const [forceIdNumber, setForceIdNumber] = useState(null);
             const [tradeCode, setTradeCode] = useState('');
-            const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
+            const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
             const [editingTradeIndex, setEditingTradeIndex] = useState(null);
             
             const [newTagKey, setNewTagKey] = useState('');
@@ -267,11 +267,22 @@
                 villagers.filter(v => v.status === 'Active').forEach(v => {
                     v.trades.forEach(t => {
                         if (t.isBuy) return;
-                        const itemNameLower = t.item.toLowerCase();
-                        const match = sortedEnchants.find(ench => itemNameLower.includes(ench.toLowerCase()));
+                        
+                        // Check both the item name (for "Efficiency V Book") AND the new enchantments field (for "Pickaxe w/ Eff V")
+                        const textToCheck = (t.item + " " + (t.enchantments || "")).toLowerCase();
+                        const match = sortedEnchants.find(ench => textToCheck.includes(ench.toLowerCase()));
+                        
                         if (match) {
                             const price = parseInt(t.price) || 999;
-                            if (!found[match] || price < found[match].price) { found[match] = { price, villagerId: v.id, location: v.location, fullItemName: t.item, villagerType: v.type }; }
+                            if (!found[match] || price < found[match].price) { 
+                                found[match] = { 
+                                    price, 
+                                    villagerId: v.id, 
+                                    location: v.location, 
+                                    fullItemName: t.item + (t.enchantments ? ` (${t.enchantments})` : ''), 
+                                    villagerType: v.type 
+                                }; 
+                            }
                         }
                     });
                 });
@@ -293,7 +304,7 @@
             };
 
             const addToCart = (trade, villager) => {
-                const newItem = { uniqueId: Date.now(), villagerId: villager.id, location: villager.location, item: trade.item, price: trade.price, costItem: trade.costItem, costQty: trade.costQty, isBuy: trade.isBuy, resultQty: trade.resultQty || 1, qty: 1 };
+                const newItem = { uniqueId: Date.now(), villagerId: villager.id, location: villager.location, item: trade.item, price: trade.price, costItem: trade.costItem, costQty: trade.costQty, isBuy: trade.isBuy, resultQty: trade.resultQty || 1, qty: 1, enchantments: trade.enchantments };
                 setCart(prev => [...prev, newItem]);
                 showToast(`Added ${trade.item} to Shopping List`);
             };
@@ -302,7 +313,7 @@
             const updateCartQty = (uniqueId, delta) => setCart(prev => prev.map(item => item.uniqueId === uniqueId ? { ...item, qty: Math.max(1, item.qty + delta) } : item));
 
             const copyVillagerInfo = (villager) => {
-                const tradesSummary = villager.trades.map(t => { if (t.isBuy) return `Sell ${t.item}`; const qtyStr = t.resultQty > 1 ? `${t.resultQty} ` : ''; return `${qtyStr}${t.item} (${t.price}e)`; }).slice(0, 2).join(', ');
+                const tradesSummary = villager.trades.map(t => { if (t.isBuy) return `Sell ${t.item}`; const qtyStr = t.resultQty > 1 ? `${t.resultQty} ` : ''; return `${qtyStr}${t.item}${t.enchantments ? ' w/ ' + t.enchantments : ''} (${t.price}e)`; }).slice(0, 2).join(', ');
                 const text = `[${villager.id}] ${villager.type} @ ${villager.location || 'Unknown'}: ${tradesSummary}${villager.trades.length > 2 ? '...' : ''}`;
                 navigator.clipboard.writeText(text).then(() => showToast(`Copied info for ${villager.id}`)).catch(err => showToast('Failed to copy', 'error'));
             };
@@ -332,7 +343,8 @@
 
             const getNextSequenceNumber = () => {
                 let maxNum = 0;
-                villagers.forEach(v => { const match = v.id.match(/-(\d{3})$/); if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; } });
+                // Updated regex to support variable length IDs (e.g. from imports)
+                villagers.forEach(v => { const match = v.id.match(/-(\d+)$/); if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; } });
                 return maxNum + 1;
             };
 
@@ -341,7 +353,8 @@
                 const prefix = getPrefix(profession, tradeTag);
                 if (specificNum !== null) return `${prefix}-${specificNum.toString().padStart(3, '0')}`;
                 if (forceIdNumber !== null) return `${prefix}-${forceIdNumber.toString().padStart(3, '0')}`;
-                const allNumbers = villagers.filter(v => v.id !== excludeId).map(v => { const match = v.id.match(/-(\d{3})$/); return match ? parseInt(match[1], 10) : null; }).filter(n => n !== null);
+                // Updated regex to support variable length IDs
+                const allNumbers = villagers.filter(v => v.id !== excludeId).map(v => { const match = v.id.match(/-(\d+)$/); return match ? parseInt(match[1], 10) : null; }).filter(n => n !== null);
                 const nextNum = allNumbers.length > 0 ? Math.max(...allNumbers) + 1 : 1;
                 return `${prefix}-${nextNum.toString().padStart(3, '0')}`;
             };
@@ -370,14 +383,14 @@
 
             const openNewVillagerForm = (preFilledNumber) => {
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 setTradeCode(''); setEditingId(null); setEditingTradeIndex(null); setForceIdNumber(preFilledNumber);
                 setIsFormOpen(true); setIsIdPickerOpen(false);
             };
 
             const handleEditClick = (villager) => {
                 setNewVillager({ ...villager });
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 const parts = villager.id.split('-');
                 if (parts.length === 3) setTradeCode(parts[1]); else setTradeCode('');
                 setEditingId(villager.id); setEditingTradeIndex(null); setForceIdNumber(null);
@@ -396,22 +409,22 @@
                 if (!tempTrade.item || !tempTrade.price) return;
                 let autoCode = null;
                 if (editingTradeIndex === null && !tradeCode && newVillager.trades.length === 0) { autoCode = generateSmartTag(tempTrade.item); setTradeCode(autoCode); }
-                const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: autoCode ? true : false };
+                const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: autoCode ? true : false, enchantments: tempTrade.enchantments };
                 if (editingTradeIndex !== null) { const updatedTrades = [...newVillager.trades]; updatedTrades[editingTradeIndex] = tradeToAdd; setNewVillager({ ...newVillager, trades: updatedTrades }); setEditingTradeIndex(null); } 
                 else { setNewVillager({ ...newVillager, trades: [...newVillager.trades, tradeToAdd] }); }
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 document.getElementById('trade-item-input').focus();
             };
 
             const handleEditTradeClick = (index) => { setTempTrade(newVillager.trades[index]); setEditingTradeIndex(index); document.getElementById('trade-item-input').focus(); };
-            const handleCancelTradeEdit = () => { setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' }); setEditingTradeIndex(null); };
+            const handleCancelTradeEdit = () => { setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' }); setEditingTradeIndex(null); };
             const removeTempTrade = (index) => { if (editingTradeIndex === index) handleCancelTradeEdit(); else if (editingTradeIndex !== null && index < editingTradeIndex) setEditingTradeIndex(editingTradeIndex - 1); const updatedTrades = newVillager.trades.filter((_, i) => i !== index); setNewVillager({ ...newVillager, trades: updatedTrades }); };
 
             const handleSaveVillager = (e) => {
                 e.preventDefault();
                 let finalTrades = [...newVillager.trades];
                 if (tempTrade.item && tempTrade.price) {
-                     const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: !tradeCode && finalTrades.length === 0 };
+                     const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: !tradeCode && finalTrades.length === 0, enchantments: tempTrade.enchantments };
                     if (editingTradeIndex !== null) finalTrades[editingTradeIndex] = tradeToAdd; else finalTrades.push(tradeToAdd);
                 }
                 const finalId = editingId ? newVillager.id : generateId(newVillager.type, tradeCode);
@@ -419,12 +432,13 @@
                 if (isDuplicate && !confirm(`Warning: ID ${finalId} is already in use by an Active villager! Save anyway?`)) return;
 
                 let updatedList = [...villagers];
-                if (forceIdNumber !== null) { updatedList = updatedList.filter(v => { const match = v.id.match(/-(\d{3})$/); return !(match && parseInt(match[1], 10) === forceIdNumber && v.status === 'Terminated'); }); }
+                // Removed logic that deleted Terminated villagers when their slot was filled. Now history is preserved.
+                
                 if (editingId) { updatedList = updatedList.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v); setVillagers(updatedList); setEditingId(null); showToast("Villager updated successfully!"); } 
                 else { updatedList.push({ ...newVillager, id: finalId, trades: finalTrades, status: 'Active' }); setVillagers(updatedList); showToast("New villager catalogued!"); }
                 setLastUpdated(new Date().toISOString());
                 setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
-                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '' });
+                setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 setTradeCode(''); setEditingTradeIndex(null); setForceIdNumber(null); setIsFormOpen(false);
             };
 
@@ -467,7 +481,7 @@
             };
 
             const handleCopySummary = () => {
-                const summary = villagers.filter(v => v.status === 'Active').map(v => { const trades = v.trades.map(t => { if (t.isBuy) return `Sell ${t.item}`; return `${t.resultQty && t.resultQty > 1 ? t.resultQty + 'x ' : ''}${t.item} (${t.price}e)`; }).join(', '); return `[${v.id}] ${v.location}: ${trades}`; }).join('\n');
+                const summary = villagers.filter(v => v.status === 'Active').map(v => { const trades = v.trades.map(t => { if (t.isBuy) return `Sell ${t.item}`; return `${t.resultQty && t.resultQty > 1 ? t.resultQty + 'x ' : ''}${t.item}${t.enchantments ? ' w/ ' + t.enchantments : ''} (${t.price}e)`; }).join(', '); return `[${v.id}] ${v.location}: ${trades}`; }).join('\n');
                 navigator.clipboard.writeText(summary).then(() => showToast("Full catalogue copied to clipboard!")).catch(() => showToast("Failed to copy summary.", "error"));
             };
 
@@ -504,7 +518,8 @@
                 const activeIds = new Set();
                 const terminatedIds = new Set();
                 let maxNum = 0;
-                villagers.forEach(v => { const match = v.id.match(/-(\d{3})$/); if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; if (v.status === 'Active') activeIds.add(num); else terminatedIds.add(num); } });
+                // Updated regex to support variable length IDs
+                villagers.forEach(v => { const match = v.id.match(/-(\d+)$/); if (match) { const num = parseInt(match[1], 10); if (num > maxNum) maxNum = num; if (v.status === 'Active') activeIds.add(num); else terminatedIds.add(num); } });
                 const grid = [];
                 for (let i = 1; i <= maxNum; i++) { let status = 'empty'; if (activeIds.has(i)) status = 'active'; else if (terminatedIds.has(i)) status = 'terminated'; grid.push({ num: i, status }); }
                 return grid;
@@ -512,7 +527,8 @@
 
             const getValidationIssues = (villager) => {
                 const issues = [];
-                if (!/^[A-Z]{3}-[A-Z0-9]{3}-\d{3}$/.test(villager.id)) issues.push("Invalid ID Format");
+                // Updated to accept any length of digits at the end
+                if (!/^[A-Z]{3}-[A-Z0-9]{3}-\d+$/.test(villager.id)) issues.push("Invalid ID Format");
                 if (!villager.trades || villager.trades.length === 0) issues.push("No Trades Assigned");
                 return issues;
             };
@@ -699,6 +715,7 @@
                                                                                     {t.item}
                                                                                 </span>
                                                                             )}
+                                                                            {t.enchantments && <div className={`text-[10px] text-${n}-500 truncate font-mono`}>{t.enchantments}</div>}
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex items-center gap-3 shrink-0">
@@ -871,7 +888,10 @@
                                     <div key={item.uniqueId} className={`bg-${n}-900/40 p-4 rounded-xl border border-${n}-800 flex flex-col gap-3 group hover:border-${n}-700 transition-colors`}>
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <div className={`font-bold text-sm mb-1 ${item.isBuy ? `text-${s}-300` : `text-${p}-300`}`}>{item.isBuy ? 'Sell' : 'Buy'} {item.item}</div>
+                                                <div className={`font-bold text-sm mb-1 ${item.isBuy ? `text-${s}-300` : `text-${p}-300`}`}>
+                                                    {item.isBuy ? 'Sell' : 'Buy'} {item.item}
+                                                    {item.enchantments && <span className={`block text-[10px] font-normal text-${n}-400`}>{item.enchantments}</span>}
+                                                </div>
                                                 <div className={`text-xs text-${n}-500 flex items-center gap-1 font-mono`}><span className={`text-${n}-600`}>{item.villagerId}</span> <span>•</span> {item.location}</div>
                                             </div>
                                             <button onClick={() => removeFromCart(item.uniqueId)} className={`text-${n}-600 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity`}><X size={16}/></button>
@@ -1014,14 +1034,23 @@
                                                 </div>
                                             </div>
                                             {!tempTrade.isBuy ? (
-                                                <div className="flex gap-2 items-center">
-                                                    <div className={`flex-1 flex gap-2 items-center bg-black/20 p-1.5 rounded-lg border border-${n}-800`}>
-                                                         <span className={`text-[10px] text-${n}-500 font-bold uppercase ml-1`}>Plus:</span>
-                                                         <input placeholder="Item (e.g. Book)" className={`flex-1 bg-transparent border-none text-${n}-300 text-xs focus:ring-0 outline-none placeholder-${n}-600`} value={tempTrade.costItem || ''} onChange={e => setTempTrade({...tempTrade, costItem: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
-                                                         <div className={`w-px h-4 bg-${n}-700`}></div>
-                                                         <input type="number" placeholder="Qty" className={`w-12 bg-transparent border-none text-${n}-300 text-xs focus:ring-0 outline-none placeholder-${n}-600 text-right`} value={tempTrade.costQty || ''} onChange={e => setTempTrade({...tempTrade, costQty: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                <div>
+                                                    <input 
+                                                        placeholder="Enchantments (e.g. Efficiency V, Unbreaking III)" 
+                                                        className={`w-full bg-black/20 border border-${n}-800 rounded-lg p-2 text-white text-xs focus:border-${p}-500 outline-none placeholder-${n}-600 mb-2`} 
+                                                        value={tempTrade.enchantments || ''} 
+                                                        onChange={e => setTempTrade({...tempTrade, enchantments: e.target.value})} 
+                                                        onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))}
+                                                    />
+                                                    <div className="flex gap-2 items-center">
+                                                        <div className={`flex-1 flex gap-2 items-center bg-black/20 p-1.5 rounded-lg border border-${n}-800`}>
+                                                            <span className={`text-[10px] text-${n}-500 font-bold uppercase ml-1`}>Plus:</span>
+                                                            <input placeholder="Item (e.g. Book)" className={`flex-1 bg-transparent border-none text-${n}-300 text-xs focus:ring-0 outline-none placeholder-${n}-600`} value={tempTrade.costItem || ''} onChange={e => setTempTrade({...tempTrade, costItem: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                            <div className={`w-px h-4 bg-${n}-700`}></div>
+                                                            <input type="number" placeholder="Qty" className={`w-12 bg-transparent border-none text-${n}-300 text-xs focus:ring-0 outline-none placeholder-${n}-600 text-right`} value={tempTrade.costQty || ''} onChange={e => setTempTrade({...tempTrade, costQty: e.target.value})} onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddTrade(e))} />
+                                                        </div>
+                                                        <button type="button" onClick={handleAddTrade} className={`bg-${n}-800 hover:bg-${n}-700 text-${p}-400 p-2.5 rounded-lg border border-${n}-700 self-stretch flex items-center justify-center transition-colors shadow-sm`} title="Confirm Trade"><Plus size={20} /></button>
                                                     </div>
-                                                    <button type="button" onClick={handleAddTrade} className={`bg-${n}-800 hover:bg-${n}-700 text-${p}-400 p-2.5 rounded-lg border border-${n}-700 self-stretch flex items-center justify-center transition-colors shadow-sm`} title="Confirm Trade"><Plus size={20} /></button>
                                                 </div>
                                             ) : (
                                                  <button type="button" onClick={handleAddTrade} className={`bg-${n}-800 hover:bg-${n}-700 text-${s}-400 p-2.5 rounded-lg border border-${n}-700 w-full flex items-center justify-center gap-2 font-bold text-sm transition-colors shadow-sm`} title="Confirm Trade"><Plus size={16} /> Add Selling Trade</button>
@@ -1032,7 +1061,10 @@
                                                         <div key={i} className={`flex justify-between items-center px-3 py-2 rounded-lg border text-sm transition-all group ${editingTradeIndex === i ? `bg-${p}-900/20 border-${p}-500/40` : `bg-black/30 border-${n}-800 hover:border-${n}-700`}`}>
                                                             <div className="flex items-center gap-2">
                                                                 <button type="button" onClick={() => toggleStar(i)} className={`transition-transform hover:scale-110 ${t.isStarred ? 'text-yellow-500' : `text-${n}-700 hover:text-yellow-500`}`}><Star size={14} fill={t.isStarred ? "currentColor" : "none"} /></button>
-                                                                {t.isBuy ? <span className={editingTradeIndex === i ? `text-${s}-300` : `text-${n}-400`}>Sell {t.price} {t.item}</span> : <span className={editingTradeIndex === i ? `text-${p}-300` : `text-${n}-300`}>Buy {t.resultQty && t.resultQty > 1 ? `${t.resultQty} ` : ''}{t.item}</span>}
+                                                                <div className="flex flex-col">
+                                                                    {t.isBuy ? <span className={editingTradeIndex === i ? `text-${s}-300` : `text-${n}-400`}>Sell {t.price} {t.item}</span> : <span className={editingTradeIndex === i ? `text-${p}-300` : `text-${n}-300`}>Buy {t.resultQty && t.resultQty > 1 ? `${t.resultQty} ` : ''}{t.item}</span>}
+                                                                    {t.enchantments && <span className={`text-[10px] text-${n}-500`}>{t.enchantments}</span>}
+                                                                </div>
                                                             </div>
                                                             <div className="flex items-center gap-3">
                                                                 {t.isBuy ? <span className={`text-${p}-500 text-xs font-mono bg-${p}-900/10 px-1 rounded`}>1 EM</span> : <div className="text-right leading-none"><span className={`text-${p}-400 font-mono text-xs`}>{t.price} Em</span>{t.costItem && <div className={`text-[9px] text-${n}-500`}>+{t.costQty} {t.costItem}</div>}</div>}
