@@ -49,6 +49,16 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
         }
+
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
     </style>
 </head>
 <body class="min-h-screen transition-colors duration-500">
@@ -57,7 +67,30 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-        // --- THEME CONFIGURATION ---
+        // --- CONSTANTS & CONFIGURATION ---
+        
+        const ITEM_ICONS = {
+            "Emerald": "💎", "Diamond": "💠", "Iron Ingot": "⛓️", "Gold Ingot": "⚱️", 
+            "Stick": "🎋", "Paper": "📄", "Book": "📖", "Bookshelf": "📚", 
+            "Glass": "⬜", "White Wool": "🐑", "Rotten Flesh": "🥩", "String": "🕸️", 
+            "Coal": "⚫", "Charcoal": "🌑", "Wheat": "🌾", "Potato": "🥔", 
+            "Carrot": "🥕", "Beetroot": "🍠", "Pumpkin": "🎃", "Melon": "🍉", 
+            "Flint": "🔻", "Clay Ball": "🔘", "Stone": "🪨", "Granite": "🟤", 
+            "Arrow": "🏹", "Compass": "🧭", "Clock": "⏰", "Name Tag": "🏷️", 
+            "Saddle": "🏇", "Enchanted Book": "📘", "Lantern": "🏮", "Glowstone": "💡",
+            "Diamond Pickaxe": "⛏️", "Diamond Sword": "⚔️", "Diamond Axe": "🪓",
+            "Iron Pickaxe": "⛏️", "Iron Sword": "⚔️", "Shield": "🛡️",
+            "Fishing Rod": "🎣", "Bucket": "🪣"
+        };
+
+        const VILLAGER_LEVELS = [
+            { name: "Novice", color: "stone", icon: "1" },
+            { name: "Apprentice", color: "orange", icon: "2" }, // Iron/Copper look
+            { name: "Journeyman", color: "amber", icon: "3" }, // Gold look
+            { name: "Expert", color: "emerald", icon: "4" }, // Emerald look
+            { name: "Master", color: "cyan", icon: "5" } // Diamond look
+        ];
+
         const THEMES = {
             emerald: {
                 id: 'emerald',
@@ -128,6 +161,8 @@
         const Trophy = (props) => ( <IconBase {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17"></path><path d="M14 14.66V17"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></IconBase> );
         const BookOpen = (props) => ( <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></IconBase> );
         const Palette = (props) => ( <IconBase {...props}><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.55 0 1-.45 1-1 0-.28-.11-.53-.29-.71-.3-.3-.29-1.01.32-1.34.43-.23.78-.47 1.14-.71.55-.37 1.34-.82 2.83-.82 2.76 0 5-2.24 5-5s-2.24-5-5-5h-5c-.55 0-1 .45-1 1z"></path></IconBase> );
+        const Sparkles = (props) => ( <IconBase {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></IconBase> );
+        const Layers = (props) => ( <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></IconBase> );
 
         // --- Helper Component: Segmented ID Badge ---
         const IdBadge = ({ id, status, size = "normal", theme }) => {
@@ -210,8 +245,9 @@
                                 <div 
                                     key={i} 
                                     onClick={() => handleSuggestionClick(opt)}
-                                    className={`px-3 py-2 text-sm text-${n}-300 hover:bg-${n}-800 cursor-pointer`}
+                                    className={`px-3 py-2 text-sm text-${n}-300 hover:bg-${n}-800 cursor-pointer flex items-center gap-2`}
                                 >
+                                    {ITEM_ICONS[opt] && <span className="text-base">{ITEM_ICONS[opt]}</span>}
                                     {opt}
                                 </div>
                             ))}
@@ -240,14 +276,17 @@
             "Compass", "Clock", "Name Tag", "Saddle", "Diamond Pickaxe", "Diamond Sword",
             "Diamond Axe", "Diamond Shovel", "Diamond Hoe", "Diamond Chestplate", 
             "Diamond Leggings", "Diamond Boots", "Diamond Helmet", "Iron Pickaxe", 
-            "Iron Sword", "Iron Axe", "Iron Shovel", "Enchanted Book", "Lantern", "Glowstone"
+            "Iron Sword", "Iron Axe", "Iron Shovel", "Enchanted Book", "Lantern", "Glowstone",
+            "Fishing Rod", "Bucket"
         ];
+        
+        const PROFESSIONS = ['Librarian', 'Fletcher', 'Armorer', 'Cleric', 'Toolsmith', 'Weaponsmith', 'Farmer', 'Mason', 'Butcher', 'Fisherman', 'Shepherd', 'Leatherworker', 'Cartographer'];
 
         // --- Main Application ---
         const VillagerCatalogue = () => {
             const initialVillagers = [
-                { id: 'LIB-MND-001', type: 'Librarian', trades: [{ item: 'Mending', price: 10, costItem: 'Book', costQty: 1, isBuy: false, isStarred: true, resultQty: 1 }, { item: 'Paper', price: 24, isBuy: true }], location: 'Enchanted Hall', status: 'Active', notes: 'First mending villager' },
-                { id: 'FLE-STK-002', type: 'Fletcher', trades: [{ item: 'Sticks', price: 32, isBuy: true, isStarred: true }, { item: 'Flint', price: 26, isBuy: true }], location: 'Fletcher Hall', status: 'Active', notes: 'Zombie cured once' },
+                { id: 'LIB-MND-001', type: 'Librarian', level: 'Novice', trades: [{ item: 'Mending', price: 10, costItem: 'Book', costQty: 1, isBuy: false, isStarred: true, resultQty: 1 }, { item: 'Paper', price: 24, isBuy: true }], location: 'Enchanted Hall', status: 'Active', notes: 'First mending villager' },
+                { id: 'FLE-STK-002', type: 'Fletcher', level: 'Expert', trades: [{ item: 'Sticks', price: 32, isBuy: true, isStarred: true }, { item: 'Flint', price: 26, isBuy: true }], location: 'Fletcher Hall', status: 'Active', notes: 'Zombie cured once' },
             ];
 
             const [themeId, setThemeId] = useState(() => localStorage.getItem('villagerTheme') || 'emerald');
@@ -262,7 +301,9 @@
                 try {
                     const parsed = JSON.parse(saved);
                     return parsed.map(v => {
+                        // Migration for old data structure
                         if (v.trade && !v.trades) { return { ...v, trades: [{ item: v.trade, price: v.price, isBuy: false, resultQty: 1 }], trade: undefined, price: undefined }; }
+                        if (!v.level) v.level = 'Novice';
                         return v;
                     });
                 } catch (e) { return initialVillagers; }
@@ -318,7 +359,7 @@
             const [cart, setCart] = useState([]);
             const [toasts, setToasts] = useState([]);
 
-            const [newVillager, setNewVillager] = useState({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
+            const [newVillager, setNewVillager] = useState({ id: '', type: 'Librarian', level: 'Novice', trades: [], location: '', notes: '' });
             const [forceIdNumber, setForceIdNumber] = useState(null);
             const [tradeCode, setTradeCode] = useState('');
             const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
@@ -326,6 +367,7 @@
             
             const [newTagKey, setNewTagKey] = useState('');
             const [newTagValue, setNewTagValue] = useState('');
+            const [smartParseInput, setSmartParseInput] = useState('');
             
             const searchInputRef = useRef(null);
             const fileInputRef = useRef(null);
@@ -333,10 +375,10 @@
 
             // --- Handlers Defined Early ---
             const openNewVillagerForm = useCallback((preFilledNumber) => {
-                setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
+                setNewVillager({ id: '', type: 'Librarian', level: 'Novice', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 setTradeCode(''); setEditingId(null); setEditingTradeIndex(null); setForceIdNumber(preFilledNumber);
-                setIsFormOpen(true); setIsIdPickerOpen(false);
+                setIsFormOpen(true); setIsIdPickerOpen(false); setSmartParseInput('');
             }, []);
 
             useEffect(() => {
@@ -457,6 +499,56 @@
                 }
             }, [newVillager.type, tradeCode, generateId, editingId]);
 
+            // --- Smart Parser ---
+            const parseSmartTrade = (input) => {
+                if (!input) return;
+                
+                // Heuristics
+                // 1. "Mending 10" -> Item: Mending, Price: 10, Buy (book)
+                // 2. "32 Sticks" -> Item: Sticks, Price: 32, Sell (commodity)
+                // 3. "Efficiency V 15" -> Item: Efficiency V, Price: 15
+                
+                let text = input.trim();
+                let price = null;
+                let item = text;
+                let isBuy = false;
+
+                // Extract last number as price if present
+                const priceMatch = text.match(/(\d+)\s*[eE]?$/); // Matches "10" or "10e" at end
+                const qtyMatchStart = text.match(/^(\d+)\s+(.+)/); // Matches "32 Sticks"
+
+                if (priceMatch) {
+                    // Case: "Mending 10"
+                    price = priceMatch[1];
+                    item = text.replace(priceMatch[0], '').trim();
+                    // Books/Enchants are usually items player buys
+                    isBuy = false; 
+                } else if (qtyMatchStart) {
+                    // Case: "32 Sticks" (Implicitly means 32 items for 1 emerald usually)
+                    price = qtyMatchStart[1];
+                    item = qtyMatchStart[2];
+                    isBuy = true; // High quantity usually means selling to villager
+                }
+
+                // Override isBuy based on item type
+                const lowerItem = item.toLowerCase();
+                const sellableKeywords = ['rotten', 'flesh', 'string', 'coal', 'wheat', 'carrot', 'potato', 'pumpkin', 'melon', 'stick', 'flint', 'clay', 'stone', 'granite', 'diorite', 'andesite', 'wool', 'paper'];
+                if (sellableKeywords.some(k => lowerItem.includes(k))) isBuy = true;
+                if (lowerItem.includes('mending') || lowerItem.includes('protection') || lowerItem.includes('efficiency') || lowerItem.includes('sharpness') || lowerItem.includes('breaking')) isBuy = false;
+
+                // Auto-fill form
+                setTempTrade({
+                    item: item.charAt(0).toUpperCase() + item.slice(1),
+                    price: price || '',
+                    costItem: (isBuy || !price) ? '' : 'Book',
+                    costQty: (isBuy || !price) ? '' : 1,
+                    isBuy: isBuy,
+                    resultQty: 1,
+                    enchantments: ''
+                });
+                showToast("Smart Parse Applied!");
+            };
+
             // --- Handlers ---
             const handleVacancySelection = useCallback((num) => {
                 if (editingId) { setForceIdNumber(num); const newId = generateId(newVillager.type, tradeCode, editingId, num); setNewVillager(prev => ({...prev, id: newId})); setIsIdPickerOpen(false); } 
@@ -471,8 +563,6 @@
             }, [villagers, openNewVillagerForm, showToast]);
 
             const handleLogButtonPress = () => { 
-                // Optimization: getVacancyData is now memoized below, but we can't easily call it inside here unless we passed it.
-                // Re-calculating once on click is fine.
                 const activeIds = new Set();
                 const terminatedIds = new Set();
                 let maxNum = 0;
@@ -536,7 +626,7 @@
                 if (editingId) { updatedList = updatedList.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v); setVillagers(updatedList); setEditingId(null); showToast("Villager updated successfully!"); } 
                 else { updatedList.push({ ...newVillager, id: finalId, trades: finalTrades, status: 'Active' }); setVillagers(updatedList); showToast("New villager catalogued!"); }
                 setLastUpdated(new Date().toISOString());
-                setNewVillager({ id: '', type: 'Librarian', trades: [], location: '', notes: '' });
+                setNewVillager({ id: '', type: 'Librarian', level: 'Novice', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 setTradeCode(''); setEditingTradeIndex(null); setForceIdNumber(null); setIsFormOpen(false);
             }, [newVillager, tempTrade, editingTradeIndex, tradeCode, editingId, generateId, villagers, showToast]);
@@ -608,6 +698,23 @@
                 }
                 return processed;
             }, [villagers, searchTerm, filterType, filterStatus, activeTab, sortType]);
+
+            const getLevelBadge = (levelName) => {
+                const lvl = VILLAGER_LEVELS.find(l => l.name === levelName) || VILLAGER_LEVELS[0];
+                const colorMap = {
+                    stone: `bg-stone-500/20 text-stone-400 border-stone-500/30`,
+                    orange: `bg-orange-500/20 text-orange-400 border-orange-500/30`,
+                    amber: `bg-amber-500/20 text-amber-400 border-amber-500/30`,
+                    emerald: `bg-emerald-500/20 text-emerald-400 border-emerald-500/30`,
+                    cyan: `bg-cyan-500/20 text-cyan-400 border-cyan-500/30`,
+                };
+                return (
+                    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${colorMap[lvl.color] || colorMap.stone} flex items-center gap-1`}>
+                        {lvl.icon && <span className="opacity-75">{lvl.icon}</span>}
+                        {lvl.name}
+                    </span>
+                );
+            };
 
             const recordedDeaths = villagers.filter(v => v.status === 'Terminated').length;
             const totalDeaths = recordedDeaths + manualDeaths;
@@ -741,13 +848,15 @@
                                 <input ref={searchInputRef} type="text" placeholder="Search item, ID, or notes... (Ctrl+K)" className={`w-full bg-black/40 border border-${n}-800 hover:border-${n}-700 focus:border-${p}-500 rounded-lg py-2 pl-10 pr-4 text-${n}-200 placeholder-${n}-600 focus:outline-none focus:ring-1 focus:ring-${p}-500 transition-all h-full text-sm`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
                             <div className="flex gap-2">
-                                <select className={`bg-black/40 border border-${n}-800 hover:border-${n}-700 rounded-lg px-3 py-2 text-${n}-300 focus:outline-none focus:ring-1 focus:ring-${p}-500 text-sm h-10 ${filterStatus === 'Terminated' ? 'text-red-400 border-red-900/30' : ''}`} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-                                    <option value="Active">Active Only</option><option value="Terminated">Terminated</option><option value="All">All Status</option>
-                                </select>
-                                <select className={`bg-black/40 border border-${n}-800 hover:border-${n}-700 rounded-lg px-3 py-2 text-${n}-300 focus:outline-none focus:ring-1 focus:ring-${p}-500 text-sm h-10`} value={filterType} onChange={(e) => setFilterType(e.target.value)}>
-                                    <option value="All">All Types</option><option value="Librarian">Librarian</option><option value="Fletcher">Fletcher</option><option value="Armorer">Armorer</option><option value="Cleric">Cleric</option><option value="Toolsmith">Toolsmith</option><option value="Weaponsmith">Weaponsmith</option><option value="Farmer">Farmer</option><option value="Mason">Mason</option><option value="Butcher">Butcher</option><option value="Fisherman">Fisherman</option><option value="Shepherd">Shepherd</option>
-                                </select>
-                                <div className="relative w-32 md:w-40">
+                                {/* PILL FILTER SECTION */}
+                                <div className="flex-1 overflow-x-auto no-scrollbar flex gap-2 items-center px-1">
+                                    <button onClick={() => setFilterType('All')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterType === 'All' ? `bg-${n}-700 text-white border-${n}-600` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}>All Types</button>
+                                    {PROFESSIONS.map(prof => (
+                                        <button key={prof} onClick={() => setFilterType(prof)} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${filterType === prof ? `bg-${p}-900/40 text-${p}-200 border-${p}-500/50` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}>{prof}</button>
+                                    ))}
+                                </div>
+
+                                <div className="relative w-32 md:w-40 shrink-0">
                                     <select className={`w-full bg-black/40 border border-${n}-800 hover:border-${n}-700 rounded-lg pl-8 pr-4 py-2 text-${n}-300 focus:outline-none focus:ring-1 focus:ring-${p}-500 appearance-none text-sm h-10`} value={sortType} onChange={(e) => setSortType(e.target.value)}>
                                         <option value="Newest">Newest</option><option value="Oldest">Oldest</option><option value="ID_ASC">ID (A-Z)</option><option value="ID_DESC">ID (Z-A)</option><option value="Type">Type</option>
                                     </select>
@@ -783,7 +892,7 @@
                                                         <div className="cursor-pointer hover:brightness-125 transition-all" onClick={() => copyVillagerInfo(villager)} title="Click ID to copy details">
                                                             <IdBadge id={villager.id} status={villager.status} size="normal" theme={theme} />
                                                         </div>
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(villager.status)}`}>{villager.status}</span>
+                                                        {getLevelBadge(villager.level)}
                                                     </div>
                                                     <div className={`flex items-center gap-2 text-sm text-${n}-400 pl-0.5`}>
                                                         <span className={`font-semibold text-${n}-300`}>{villager.type}</span>
@@ -807,12 +916,13 @@
                                                                 <div key={idx} className={`relative flex justify-between items-center text-sm px-3 py-2 rounded-md border transition-all ${isTradeMatch ? `bg-${p}-900/20 border-${p}-500/50` : `bg-${n}-900/40 border-${n}-800 hover:bg-${n}-800/60`}`}>
                                                                     <div className="flex items-center gap-2 overflow-hidden">
                                                                         {t.isStarred && <Star size={10} fill="currentColor" className={t.isBuy ? `text-${s}-500 shrink-0` : `text-${p}-500 shrink-0`} />}
-                                                                        <div className="truncate">
+                                                                        <div className="truncate flex items-center gap-1.5">
                                                                             {t.isBuy ? (
-                                                                                <span className={isTradeMatch ? `text-${s}-200 font-medium` : `text-${n}-300`}>{t.item}</span>
+                                                                                <span className={isTradeMatch ? `text-${s}-200 font-medium` : `text-${n}-300`}>{ITEM_ICONS[t.item] && <span className="mr-1">{ITEM_ICONS[t.item]}</span>}{t.item}</span>
                                                                             ) : (
                                                                                 <span className={isTradeMatch ? `text-${p}-200 font-medium` : `text-${n}-300`}>
                                                                                     {t.resultQty > 1 && <span className={`text-${n}-500 font-mono text-xs mr-1`}>{t.resultQty}x</span>}
+                                                                                    {ITEM_ICONS[t.item] && <span className="mr-1">{ITEM_ICONS[t.item]}</span>}
                                                                                     {t.item}
                                                                                 </span>
                                                                             )}
@@ -869,11 +979,34 @@
                                             <li><span className="text-white">Smart IDs:</span> IDs are formatted as PROF-TAG-NUM (e.g., LIB-MND-001).</li>
                                         </ul>
                                     </section>
+                                    
+                                    {/* NEW SECTION: Shopping List */}
+                                    <section>
+                                        <h3 className={`text-${p}-400 font-bold mb-2 text-base`}>Shopping List</h3>
+                                        <p className="mb-2">Plan your trading trips by adding trades to your cart.</p>
+                                        <ul className={`list-disc pl-5 space-y-1 text-${n}-400`}>
+                                            <li><span className="text-white">Add Items:</span> Click the <span className="font-bold">+</span> button next to any trade in the catalogue.</li>
+                                            <li><span className="text-white">Calculate Costs:</span> Open the <span className="font-bold">Shopping Bag</span> to see total Emeralds and raw materials (e.g., Books, Iron) required.</li>
+                                            <li><span className="text-white">Profit Mode:</span> Add "Sell" trades to see how many emeralds you will gain.</li>
+                                        </ul>
+                                    </section>
+
                                     <section>
                                         <h3 className={`text-${p}-400 font-bold mb-2 text-base`}>Managing Vacancies</h3>
                                         <p>If a villager dies or is removed, mark them as <span className="text-red-400 font-bold">Terminated</span> (Skull Icon). This preserves their history but removes them from active lists.</p>
                                         <p className="mt-2">Use the <span className="text-white font-bold">Vacancy Grid</span> button to see all used ID numbers. You can fill "gaps" in the numbering sequence (terminated or deleted slots) by clicking an empty number.</p>
                                     </section>
+
+                                    {/* NEW SECTION: Library & Data */}
+                                    <section>
+                                        <h3 className={`text-${p}-400 font-bold mb-2 text-base`}>Library & Data</h3>
+                                        <ul className={`list-disc pl-5 space-y-1 text-${n}-400`}>
+                                            <li><span className="text-white">Enchantment Library:</span> Click the Book icon to see which enchantments you have collected and find the cheapest price for each.</li>
+                                            <li><span className="text-white">Export/Import:</span> Use the Settings menu to backup your catalogue to a JSON file or transfer it to another device.</li>
+                                            <li><span className="text-white">Themes:</span> Switch between Deep Slate, Void, and Nether themes in Settings.</li>
+                                        </ul>
+                                    </section>
+
                                     <section>
                                         <h3 className={`text-${p}-400 font-bold mb-2 text-base`}>Keyboard Shortcuts</h3>
                                         <ul className={`list-disc pl-5 space-y-1 text-${n}-400`}>
@@ -1111,15 +1244,24 @@
                                             <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Profession</label>
                                             <div className="relative">
                                                 <select className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none appearance-none`} value={newVillager.type} onChange={e => setNewVillager({...newVillager, type: e.target.value})}>
-                                                    <option>Librarian</option><option>Fletcher</option><option>Armorer</option><option>Cleric</option><option>Toolsmith</option><option>Weaponsmith</option><option>Farmer</option><option>Mason</option><option>Butcher</option><option>Fisherman</option>
+                                                    {PROFESSIONS.map(p => <option key={p}>{p}</option>)}
                                                 </select>
                                                 <div className={`absolute right-3 top-3.5 pointer-events-none text-${n}-500`}><ArrowUpDown size={14}/></div>
                                             </div>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Location</label>
-                                            <input placeholder="e.g. Hall A, Pod 3" className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none placeholder-${n}-600`} value={newVillager.location} onChange={e => setNewVillager({...newVillager, location: e.target.value})} />
+                                            <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Mastery Level</label>
+                                            <div className="relative">
+                                                <select className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none appearance-none`} value={newVillager.level} onChange={e => setNewVillager({...newVillager, level: e.target.value})}>
+                                                    {VILLAGER_LEVELS.map(l => <option key={l.name}>{l.name}</option>)}
+                                                </select>
+                                                <div className={`absolute right-3 top-3.5 pointer-events-none text-${n}-500`}><ArrowUpDown size={14}/></div>
+                                            </div>
                                         </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Location</label>
+                                        <input placeholder="e.g. Hall A, Pod 3" className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none placeholder-${n}-600`} value={newVillager.location} onChange={e => setNewVillager({...newVillager, location: e.target.value})} />
                                     </div>
                                     <div className={`bg-${n}-900/30 p-4 rounded-xl border border-${n}-700/50`}>
                                         <div className="flex justify-between items-center mb-4">
@@ -1129,6 +1271,30 @@
                                                 <button type="button" onClick={() => setTempTrade({...tempTrade, isBuy: true})} className={`text-xs px-3 py-1.5 rounded-md transition-all font-medium ${tempTrade.isBuy ? `bg-${s}-600 text-white shadow` : `text-${n}-500 hover:text-white`}`}>Sell</button>
                                             </div>
                                         </div>
+                                        {/* SMART PARSE INPUT */}
+                                        <div className="mb-4">
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                     <div className={`absolute left-3 top-2.5 text-${n}-500 pointer-events-none`}><Sparkles size={16} /></div>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="Smart Paste (e.g. 'Mending 10' or '32 Sticks')" 
+                                                        className={`w-full bg-${n}-900/50 border border-${p}-500/30 focus:border-${p}-500 rounded-lg pl-9 pr-3 py-2 text-sm text-${p}-200 placeholder-${n}-600 focus:outline-none transition-all`}
+                                                        value={smartParseInput}
+                                                        onChange={(e) => setSmartParseInput(e.target.value)}
+                                                        onKeyPress={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                parseSmartTrade(smartParseInput);
+                                                                setSmartParseInput('');
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                                <button type="button" onClick={() => { parseSmartTrade(smartParseInput); setSmartParseInput(''); }} className={`bg-${p}-900/40 text-${p}-300 hover:bg-${p}-900/60 border border-${p}-500/30 px-3 rounded-lg text-xs font-bold transition-colors`}>Parse</button>
+                                            </div>
+                                        </div>
+
                                         <div className="flex flex-col gap-3">
                                             <div className="flex flex-col sm:flex-row gap-2">
                                                 <div className="flex gap-2 w-full sm:w-auto">
