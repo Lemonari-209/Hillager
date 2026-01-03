@@ -874,10 +874,21 @@
                             filteredAndSortedVillagers.map((villager) => {
                                 const issues = getValidationIssues(villager);
                                 const hasIssues = issues.length > 0;
+                                
+                                // Dynamic Level Color for Glow
+                                const levelObj = VILLAGER_LEVELS.find(l => l.name === villager.level) || VILLAGER_LEVELS[0];
+                                const glowColor = levelObj.color; // e.g., 'cyan', 'emerald'
+
                                 let containerClasses = "group relative rounded-xl p-5 border transition-all duration-300 ";
-                                if (villager.status === 'Terminated') containerClasses += "border-red-900/20 bg-gradient-to-br from-red-950/10 to-transparent opacity-75 grayscale-[0.5]";
-                                else if (hasIssues) containerClasses += `border-${s}-500/30 bg-${s}-950/10 hover:border-${s}-400`;
-                                else containerClasses += `bg-${n}-900/80 border-${n}-800 hover:border-${p}-500/40 hover:shadow-lg hover:shadow-${p}-900/10 hover:-translate-y-0.5`;
+                                if (villager.status === 'Terminated') {
+                                    containerClasses += "border-red-900/20 bg-gradient-to-br from-red-950/10 to-transparent opacity-75 grayscale-[0.5]";
+                                } else if (hasIssues) {
+                                    containerClasses += `border-${s}-500/30 bg-${s}-950/10 hover:border-${s}-400`;
+                                } else {
+                                    // ADDED: Dynamic hover glow based on level
+                                    containerClasses += `bg-${n}-900/80 border-${n}-800 hover:border-${glowColor}-500/50 hover:shadow-lg hover:shadow-${glowColor}-900/20 hover:-translate-y-0.5`;
+                                }
+
                                 const visibleTrades = villager.trades ? villager.trades.filter(t => activeTab === 'buy' ? !t.isBuy : t.isBuy) : [];
                                 return (
                                     <div key={villager.id} className={containerClasses}>
@@ -890,10 +901,11 @@
                                                         </div>
                                                         {getLevelBadge(villager.level)}
                                                     </div>
-                                                    <div className={`flex items-center gap-2 text-sm text-${n}-400 pl-0.5`}>
-                                                        <span className={`font-semibold text-${n}-300`}>{villager.type}</span>
-                                                        <span className={`w-1 h-1 bg-${n}-600 rounded-full`}></span>
-                                                        <span className="flex items-center gap-1 text-xs"><MapPin size={12} /> {villager.location || "Unknown"}</span>
+                                                    {/* IMPROVED TYPOGRAPHY CONTRAST */}
+                                                    <div className={`flex items-center gap-2 text-sm text-${n}-500 pl-0.5`}>
+                                                        <span className={`font-bold text-${n}-200`}>{villager.type}</span>
+                                                        <span className={`w-1 h-1 bg-${n}-700 rounded-full`}></span>
+                                                        <span className="flex items-center gap-1 text-xs text-${n}-500"><MapPin size={12} /> {villager.location || "Unknown"}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -913,20 +925,21 @@
                                                                     <div className="flex items-center gap-2 overflow-hidden">
                                                                         {t.isStarred && <Star size={10} fill="currentColor" className={t.isBuy ? `text-${s}-500 shrink-0` : `text-${p}-500 shrink-0`} />}
                                                                         <div className="truncate flex items-center gap-1.5">
+                                                                            {/* IMPROVED TYPOGRAPHY: Brighter Item Names */}
                                                                             {t.isBuy ? (
-                                                                                <span className={isTradeMatch ? `text-${s}-200 font-medium` : `text-${n}-300`}>{t.item}</span>
+                                                                                <span className={isTradeMatch ? `text-${s}-200 font-bold` : `text-${n}-200 font-medium`}>{t.item}</span>
                                                                             ) : (
-                                                                                <span className={isTradeMatch ? `text-${p}-200 font-medium` : `text-${n}-300`}>
-                                                                                    {t.resultQty > 1 && <span className={`text-${n}-500 font-mono text-xs mr-1`}>{t.resultQty}x</span>}
+                                                                                <span className={isTradeMatch ? `text-${p}-200 font-bold` : `text-${n}-200 font-medium`}>
+                                                                                    {t.resultQty > 1 && <span className={`text-${n}-500 font-mono text-xs mr-1 font-normal`}>{t.resultQty}x</span>}
                                                                                     {t.item}
                                                                                 </span>
                                                                             )}
-                                                                            {t.enchantments && <div className={`text-[10px] text-${n}-500 truncate font-mono`}>{t.enchantments}</div>}
+                                                                            {t.enchantments && <div className={`text-[10px] text-${n}-500 truncate font-mono bg-${n}-900/50 px-1 rounded`}>{t.enchantments}</div>}
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex items-center gap-3 shrink-0">
                                                                          <div className="text-right leading-none">
-                                                                            <div className={`font-mono text-${n}-400 font-bold`}>{t.price}<span className={`text-[10px] ml-0.5 font-normal text-${n}-600`}>EM</span></div>
+                                                                            <div className={`font-mono text-${n}-300 font-bold`}>{t.price}<span className={`text-[10px] ml-0.5 font-normal text-${n}-600`}>EM</span></div>
                                                                             {t.costItem && <div className={`text-[9px] text-${n}-500 mt-0.5`}>+ {t.costQty} {t.costItem}</div>}
                                                                         </div>
                                                                         <div className="flex items-center">
