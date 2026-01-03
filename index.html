@@ -141,6 +141,7 @@
         const Star = (props) => ( <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></IconBase> );
         const RefreshCw = (props) => ( <IconBase {...props}><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></IconBase> );
         const Settings = (props) => ( <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></IconBase> );
+        const Menu = (props) => ( <IconBase {...props}><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line></IconBase> );
         const Copy = (props) => ( <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></IconBase> );
         const GridIcon = (props) => ( <IconBase {...props}><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></IconBase> );
         const HelpCircle = (props) => ( <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></IconBase> );
@@ -254,6 +255,24 @@
             "Multishot", "Piercing", "Quick Charge"
         ];
 
+        // NEW: Item Applicability Map
+        const APPLICABLE_ENCHANTS = {
+            "Helmet": ["Protection", "Fire Protection", "Blast Protection", "Projectile Protection", "Respiration", "Aqua Affinity", "Thorns", "Unbreaking", "Mending"],
+            "Chestplate": ["Protection", "Fire Protection", "Blast Protection", "Projectile Protection", "Thorns", "Unbreaking", "Mending"],
+            "Leggings": ["Protection", "Fire Protection", "Blast Protection", "Projectile Protection", "Thorns", "Swift Sneak", "Unbreaking", "Mending"],
+            "Boots": ["Protection", "Fire Protection", "Blast Protection", "Projectile Protection", "Thorns", "Depth Strider", "Frost Walker", "Feather Falling", "Soul Speed", "Unbreaking", "Mending"],
+            "Sword": ["Sharpness", "Smite", "Bane of Arthropods", "Knockback", "Fire Aspect", "Looting", "Sweeping Edge", "Unbreaking", "Mending"],
+            "Axe": ["Sharpness", "Smite", "Bane of Arthropods", "Efficiency", "Silk Touch", "Fortune", "Unbreaking", "Mending"],
+            "Pickaxe": ["Efficiency", "Silk Touch", "Fortune", "Unbreaking", "Mending"],
+            "Shovel": ["Efficiency", "Silk Touch", "Fortune", "Unbreaking", "Mending"],
+            "Hoe": ["Efficiency", "Silk Touch", "Fortune", "Unbreaking", "Mending"],
+            "Bow": ["Power", "Punch", "Flame", "Infinity", "Unbreaking", "Mending"],
+            "Crossbow": ["Multishot", "Piercing", "Quick Charge", "Unbreaking", "Mending"],
+            "Trident": ["Impaling", "Riptide", "Loyalty", "Channeling", "Unbreaking", "Mending"],
+            "Fishing Rod": ["Luck of the Sea", "Lure", "Unbreaking", "Mending"],
+            "Elytra": ["Unbreaking", "Mending"]
+        };
+
         const COMMON_ITEMS = [
             "Emerald", "Diamond", "Iron Ingot", "Gold Ingot", "Stick", "Paper", "Book", 
             "Bookshelf", "Glass", "White Wool", "Rotten Flesh", "String", "Coal", 
@@ -341,12 +360,14 @@
             const [isIdPickerOpen, setIsIdPickerOpen] = useState(false); 
             const [isLibraryOpen, setIsLibraryOpen] = useState(false);
             const [showFilters, setShowFilters] = useState(false);
+            const [isMenuOpen, setIsMenuOpen] = useState(false);
+            const [libraryFilterItem, setLibraryFilterItem] = useState(null); // New state for Library Filter
             
             const [editingId, setEditingId] = useState(null); 
             const [cart, setCart] = useState([]);
             const [toasts, setToasts] = useState([]);
 
-            const [newVillager, setNewVillager] = useState({ id: '', type: 'Librarian', level: 'Novice', trades: [], location: '', notes: '' });
+            const [newVillager, setNewVillager] = useState({ id: '', type: 'Librarian', level: 'Novice', status: 'Active', trades: [], location: '', notes: '' });
             const [forceIdNumber, setForceIdNumber] = useState(null);
             const [tradeCode, setTradeCode] = useState('');
             const [tempTrade, setTempTrade] = useState({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
@@ -359,10 +380,11 @@
             const searchInputRef = useRef(null);
             const fileInputRef = useRef(null);
             const tradeInputRef = useRef(null);
+            const menuRef = useRef(null);
 
             // --- Handlers Defined Early ---
             const openNewVillagerForm = useCallback((preFilledNumber) => {
-                setNewVillager({ id: '', type: 'Librarian', level: 'Novice', trades: [], location: '', notes: '' });
+                setNewVillager({ id: '', type: 'Librarian', level: 'Novice', status: 'Active', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 setTradeCode(''); setEditingId(null); setEditingTradeIndex(null); setForceIdNumber(preFilledNumber);
                 setIsFormOpen(true); setIsIdPickerOpen(false); setSmartParseInput('');
@@ -382,6 +404,16 @@
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [openNewVillagerForm]);
+
+            useEffect(() => {
+                function handleClickOutside(event) {
+                    if (menuRef.current && !menuRef.current.contains(event.target)) {
+                        setIsMenuOpen(false);
+                    }
+                }
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, []);
 
             // --- Business Logic ---
             const libraryData = useMemo(() => {
@@ -580,11 +612,34 @@
             const handleAddTrade = (e) => {
                 if(e) e.preventDefault();
                 if (!tempTrade.item || !tempTrade.price) return;
+                
                 let autoCode = null;
-                if (editingTradeIndex === null && !tradeCode && newVillager.trades.length === 0) { autoCode = generateSmartTag(tempTrade.item); setTradeCode(autoCode); }
-                const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: autoCode ? true : false, enchantments: tempTrade.enchantments };
-                if (editingTradeIndex !== null) { const updatedTrades = [...newVillager.trades]; updatedTrades[editingTradeIndex] = tradeToAdd; setNewVillager({ ...newVillager, trades: updatedTrades }); setEditingTradeIndex(null); } 
-                else { setNewVillager({ ...newVillager, trades: [...newVillager.trades, tradeToAdd] }); }
+                // Only generate auto-code if we are adding a NEW trade (not editing) and don't have a code yet
+                if (editingTradeIndex === null && !tradeCode && newVillager.trades.length === 0) { 
+                    autoCode = generateSmartTag(tempTrade.item); 
+                    setTradeCode(autoCode); 
+                }
+
+                // Preserve existing star status if editing, otherwise use autoCode logic
+                const isStarred = editingTradeIndex !== null ? tempTrade.isStarred : (autoCode ? true : false);
+
+                const tradeToAdd = { 
+                    ...tempTrade, 
+                    costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', 
+                    resultQty: tempTrade.resultQty || 1, 
+                    isStarred: isStarred, 
+                    enchantments: tempTrade.enchantments 
+                };
+
+                if (editingTradeIndex !== null) { 
+                    const updatedTrades = [...newVillager.trades]; 
+                    updatedTrades[editingTradeIndex] = tradeToAdd; 
+                    setNewVillager({ ...newVillager, trades: updatedTrades }); 
+                    setEditingTradeIndex(null); 
+                } else { 
+                    setNewVillager({ ...newVillager, trades: [...newVillager.trades, tradeToAdd] }); 
+                }
+                
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 // Attempt to focus main input after add
                 setTimeout(() => {
@@ -600,26 +655,46 @@
             const handleSaveVillager = useCallback((e) => {
                 e.preventDefault();
                 let finalTrades = [...newVillager.trades];
+                
+                // Handle the case where user typed a trade but didn't hit "Add" button
                 if (tempTrade.item && tempTrade.price) {
-                     const tradeToAdd = { ...tempTrade, costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', resultQty: tempTrade.resultQty || 1, isStarred: !tradeCode && finalTrades.length === 0, enchantments: tempTrade.enchantments };
+                     const isStarred = editingTradeIndex !== null ? tempTrade.isStarred : (!tradeCode && finalTrades.length === 0);
+                     const tradeToAdd = { 
+                        ...tempTrade, 
+                        costQty: tempTrade.costItem ? (tempTrade.costQty || 1) : '', 
+                        resultQty: tempTrade.resultQty || 1, 
+                        isStarred: isStarred, 
+                        enchantments: tempTrade.enchantments 
+                    };
                     if (editingTradeIndex !== null) finalTrades[editingTradeIndex] = tradeToAdd; else finalTrades.push(tradeToAdd);
                 }
+
                 const finalId = editingId ? newVillager.id : generateId(newVillager.type, tradeCode);
                 const isDuplicate = villagers.some(v => v.id === finalId && v.id !== editingId && v.status !== 'Terminated');
                 if (isDuplicate && !confirm(`Warning: ID ${finalId} is already in use by an Active villager! Save anyway?`)) return;
 
                 let updatedList = [...villagers];
                 
-                if (editingId) { updatedList = updatedList.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v); setVillagers(updatedList); setEditingId(null); showToast("Villager updated successfully!"); } 
-                else { updatedList.push({ ...newVillager, id: finalId, trades: finalTrades, status: 'Active' }); setVillagers(updatedList); showToast("New villager catalogued!"); }
+                if (editingId) { 
+                    updatedList = updatedList.map(v => v.id === editingId ? { ...newVillager, id: finalId, trades: finalTrades } : v); 
+                    setVillagers(updatedList); 
+                    setEditingId(null); 
+                    showToast("Villager updated successfully!"); 
+                } else { 
+                    // FIX: Use newVillager.status instead of hardcoded 'Active'
+                    updatedList.push({ ...newVillager, id: finalId, trades: finalTrades, status: newVillager.status || 'Active' }); 
+                    setVillagers(updatedList); 
+                    showToast("New villager catalogued!"); 
+                }
+                
                 setLastUpdated(new Date().toISOString());
-                setNewVillager({ id: '', type: 'Librarian', level: 'Novice', trades: [], location: '', notes: '' });
+                setNewVillager({ id: '', type: 'Librarian', level: 'Novice', status: 'Active', trades: [], location: '', notes: '' });
                 setTempTrade({ item: '', price: '', costItem: '', costQty: '', isBuy: false, resultQty: '', enchantments: '' });
                 setTradeCode(''); setEditingTradeIndex(null); setForceIdNumber(null); setIsFormOpen(false);
             }, [newVillager, tempTrade, editingTradeIndex, tradeCode, editingId, generateId, villagers, showToast]);
 
             const toggleStatus = (id) => { setVillagers(villagers.map(v => { if (v.id === id) { const newStatus = v.status === 'Active' ? 'Terminated' : 'Active'; showToast(`Status changed to ${newStatus}`); return { ...v, status: newStatus }; } return v; })); setLastUpdated(new Date().toISOString()); };
-            const deleteVillager = (id) => { if (confirm('Are you sure you want to delete this record permanently?')) { setVillagers(villagers.filter(v => v.id !== id)); setLastUpdated(new Date().toISOString()); showToast("Record permanently deleted.", "error"); } };
+            const deleteVillager = (id) => { if (confirm('Are you sure you want to delete this record permanently?')) { setVillagers(villagers.filter(v => v.id !== id)); setLastUpdated(new Date().toISOString()); showToast("Record permanently deleted.", "error"); setIsFormOpen(false); } };
             const handleClearAllData = () => { if (confirm('WARNING: This will permanently delete ALL villager records. Are you sure?')) { if (confirm('Final check: This action cannot be undone. Delete everything?')) { setVillagers([]); setManualDeaths(0); setLastUpdated(new Date().toISOString()); showToast('All data cleared.', 'error'); setIsSettingsOpen(false); } } };
             const handleAddOverride = (e) => { e.preventDefault(); if(newTagKey && newTagValue) { setTagOverrides(prev => ({...prev, [newTagKey]: newTagValue.toUpperCase()})); setNewTagKey(''); setNewTagValue(''); showToast(`Tag added: ${newTagValue.toUpperCase()}`); } };
             const handleDeleteOverride = (key) => { const newTags = {...tagOverrides}; delete newTags[key]; setTagOverrides(newTags); };
@@ -775,47 +850,21 @@
                                 <button onClick={() => setIsLibraryOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${a}-300 hover:text-${a}-200 px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800 hover:border-${a}-500/30`} title="Enchantment Library">
                                     <BookOpen size={20} />
                                 </button>
-                                <button onClick={() => setIsGuideOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${n}-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800`} title="User Guide"><HelpCircle size={20} /></button>
-                                <button onClick={() => setIsVacancyOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${n}-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800`} title="View ID Vacancies"><GridIcon size={20} /></button>
-                                <button onClick={() => setIsSettingsOpen(true)} className={`bg-${n}-900 hover:bg-${n}-800 text-${n}-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800`} title="Settings"><Settings size={20} /></button>
                                 <button onClick={handleLogButtonPress} className={`bg-gradient-to-r from-${p}-600 to-${a}-600 hover:from-${p}-500 hover:to-${a}-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-${p}-900/20 font-medium border border-${p}-500/20`} title="Shortuct: Shift+N"><Plus size={20} /><span>Log Villager</span></button>
-                            </div>
-                            {lastUpdated && <span className={`text-[10px] uppercase tracking-wider text-${n}-600 px-1 font-mono mt-1`}>Updated: {new Date(lastUpdated).toLocaleDateString()}</span>}
-                        </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between`}>
-                            <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Total Records</div>
-                            <div className={`text-3xl font-mono font-bold text-${n}-200`}>{villagers.length}</div>
-                        </div>
-                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between relative overflow-hidden`}>
-                            <div className={`absolute top-0 right-0 w-16 h-16 bg-${p}-500/5 rounded-full blur-xl -mr-8 -mt-8`}></div>
-                            <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Active Traders</div>
-                            <div className={`text-3xl font-mono font-bold text-${p}-400`}>{villagers.filter(v => v.status === 'Active').length}</div>
-                        </div>
-                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between group select-none relative overflow-hidden`}>
-                            <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-full blur-xl -mr-8 -mt-8"></div>
-                            <div className="flex justify-between items-start">
-                                <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Casualties</div>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => setManualDeaths(d => d + 1)} className={`hover:bg-${n}-800 text-${n}-500 hover:text-white p-1 rounded`}><Plus size={12} /></button>
-                                    <button onClick={() => setManualDeaths(d => Math.max(0, d - 1))} className={`hover:bg-${n}-800 text-${n}-500 hover:text-white p-1 rounded`}><Minus size={12} /></button>
+                                
+                                <div className="relative" ref={menuRef}>
+                                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`bg-${n}-900 hover:bg-${n}-800 text-${n}-400 hover:text-white px-3 py-2 rounded-lg flex items-center justify-center transition-colors border border-${n}-800`} title="Menu"><Menu size={20} /></button>
+                                    {isMenuOpen && (
+                                        <div className={`absolute right-0 top-full mt-2 w-48 bg-${n}-900 border border-${n}-700 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col p-1 animate-in fade-in zoom-in-95 duration-200`}>
+                                             <button onClick={() => { setIsVacancyOpen(true); setIsMenuOpen(false); }} className={`p-2 text-left text-sm text-${n}-300 hover:bg-${n}-800 hover:text-white rounded-lg flex items-center gap-3 transition-colors`}><GridIcon size={16}/> <span>Vacancies</span></button>
+                                             <button onClick={() => { setIsGuideOpen(true); setIsMenuOpen(false); }} className={`p-2 text-left text-sm text-${n}-300 hover:bg-${n}-800 hover:text-white rounded-lg flex items-center gap-3 transition-colors`}><HelpCircle size={16}/> <span>User Guide</span></button>
+                                             <div className={`h-px bg-${n}-800 my-1`}></div>
+                                             <button onClick={() => { setIsSettingsOpen(true); setIsMenuOpen(false); }} className={`p-2 text-left text-sm text-${n}-300 hover:bg-${n}-800 hover:text-white rounded-lg flex items-center gap-3 transition-colors`}><Settings size={16}/> <span>Settings</span></button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <div className="text-3xl font-mono font-bold text-red-400">{totalDeaths}</div>
-                        </div>
-                        <div className={`bg-${n}-900/50 p-4 rounded-xl border border-${n}-800/60 flex flex-col justify-between relative overflow-hidden`}>
-                            <div className={`absolute top-0 right-0 w-16 h-16 bg-${a}-500/5 rounded-full blur-xl -mr-8 -mt-8`}></div>
-                            <div className={`text-${n}-500 text-xs uppercase font-bold tracking-wider mb-2`}>Library Progress</div>
-                            <div className="flex items-baseline gap-2">
-                                <span className={`text-3xl font-mono font-bold text-${a}-400`}>{collectedEnchantmentCount}</span>
-                                <span className={`text-sm text-${n}-600 font-mono`}>/{totalEnchantmentCount}</span>
-                            </div>
-                            <div className={`w-full bg-${n}-900 h-1 mt-2 rounded-full overflow-hidden`}>
-                                <div className={`bg-${a}-600 h-full rounded-full transition-all duration-1000`} style={{ width: `${collectionPercentage}%` }}></div>
-                            </div>
+                            {lastUpdated && <span className={`text-[10px] uppercase tracking-wider text-${n}-600 px-1 font-mono mt-1`}>Updated: {new Date(lastUpdated).toLocaleDateString()}</span>}
                         </div>
                     </div>
 
@@ -909,9 +958,7 @@
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => handleEditClick(villager)} className={`p-1.5 rounded hover:bg-${n}-800 text-${n}-500 hover:text-${a}-400 transition-colors`} title="Edit"><Pencil size={16} /></button>
-                                                    <button onClick={() => toggleStatus(villager.id)} className={`p-1.5 rounded hover:bg-${n}-800 transition-colors ${villager.status === 'Terminated' ? `text-${p}-400` : `text-${n}-500 hover:text-${p}-400`}`} title={villager.status === 'Terminated' ? "Revive" : "Terminate"}>{villager.status === 'Terminated' ? <Check size={16} /> : <Skull size={16} />}</button>
-                                                    <button onClick={() => deleteVillager(villager.id)} className={`p-1.5 rounded hover:bg-red-900/30 text-${n}-500 hover:text-red-400 transition-colors`} title="Delete"><Trash2 size={16} /></button>
+                                                    <button onClick={() => handleEditClick(villager)} className={`p-1.5 rounded hover:bg-${n}-800 text-${n}-500 hover:text-${a}-400 transition-colors`} title="Edit Details"><Pencil size={16} /></button>
                                                 </div>
                                             </div>
                                             <div className={`flex-1 rounded-lg border p-3 ${villager.status === 'Terminated' ? 'bg-red-900/5 border-red-900/10' : `bg-black/30 border-${n}-800/50`}`}>
@@ -1068,7 +1115,7 @@
                                     <button onClick={() => setIsLibraryOpen(false)} className={`text-${n}-400 hover:text-white transition-colors p-2 hover:bg-${n}-800 rounded-lg`}><X size={20} /></button>
                                 </div>
                                 <div className="p-6 overflow-y-auto custom-scrollbar">
-                                    <div className={`mb-8 p-4 rounded-xl bg-gradient-to-r from-${a}-900/20 to-${p}-900/20 border border-${a}-500/10`}>
+                                    <div className={`mb-6 p-4 rounded-xl bg-gradient-to-r from-${a}-900/20 to-${p}-900/20 border border-${a}-500/10`}>
                                         <div className="flex justify-between items-end mb-3">
                                             <div className={`text-sm font-bold text-${a}-300 uppercase tracking-wider`}>Collection Progress</div>
                                             <div className="text-2xl font-mono font-bold text-white">{collectedEnchantmentCount} <span className={`text-${n}-500 text-lg`}>/ {totalEnchantmentCount}</span></div>
@@ -1077,13 +1124,59 @@
                                             <div className={`h-full bg-gradient-to-r from-${a}-500 to-${p}-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]`} style={{ width: `${collectionPercentage}%` }}></div>
                                         </div>
                                     </div>
+
+                                    {/* NEW: Item Filter Bar */}
+                                    <div className="mb-6">
+                                        <div className={`text-xs font-bold text-${n}-500 uppercase tracking-wider mb-2`}>Filter by Applicable Item</div>
+                                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                                            <button 
+                                                onClick={() => setLibraryFilterItem(null)} 
+                                                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${!libraryFilterItem ? `bg-${a}-900/40 text-${a}-200 border-${a}-500/50` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}
+                                            >
+                                                Show All
+                                            </button>
+                                            {Object.keys(APPLICABLE_ENCHANTS).map(item => (
+                                                <button 
+                                                    key={item} 
+                                                    onClick={() => setLibraryFilterItem(libraryFilterItem === item ? null : item)} 
+                                                    className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${libraryFilterItem === item ? `bg-${a}-900/40 text-${a}-200 border-${a}-500/50` : `bg-${n}-800/50 text-${n}-500 border-transparent hover:text-${n}-300 hover:bg-${n}-800`}`}
+                                                >
+                                                    {item}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                         {ALL_ENCHANTMENTS.map(ench => {
                                             const data = libraryData[ench];
+                                            const isApplicable = !libraryFilterItem || APPLICABLE_ENCHANTS[libraryFilterItem].includes(ench);
+                                            
+                                            // Style logic: 
+                                            // If filter is active and NOT applicable: Dim heavily
+                                            // If collected: Show normally
+                                            // If uncollected: Gray out
+                                            
+                                            let opacityClass = "opacity-100";
+                                            let bgClass = data ? `bg-${n}-900/60 border-${a}-500/30` : `bg-${n}-900/30 border-${n}-800`;
+                                            let textClass = data ? `text-${a}-100` : `text-${n}-500`;
+                                            
+                                            if (libraryFilterItem && !isApplicable) {
+                                                opacityClass = "opacity-20 blur-[1px]";
+                                            } else if (!data) {
+                                                opacityClass = "opacity-60 grayscale";
+                                            } else {
+                                                // Active and applicable
+                                                bgClass += ` hover:border-${a}-400 hover:shadow-[0_4px_20px_rgba(20,184,166,0.1)]`;
+                                            }
+
                                             return (
-                                                <div key={ench} className={`p-4 rounded-xl border flex flex-col justify-between h-28 transition-all relative overflow-hidden group ${data ? `bg-${n}-900/60 border-${a}-500/30 hover:border-${a}-400 hover:shadow-[0_4px_20px_rgba(20,184,166,0.1)]` : `bg-${n}-900/30 border-${n}-800 opacity-50 grayscale hover:opacity-70`}`}>
+                                                <div key={ench} className={`p-4 rounded-xl border flex flex-col justify-between h-28 transition-all relative overflow-hidden group ${bgClass} ${opacityClass}`}>
                                                     {data && <div className={`absolute top-0 right-0 w-16 h-16 bg-${a}-500/10 rounded-bl-full -mr-8 -mt-8 pointer-events-none`}></div>}
-                                                    <div className="flex justify-between items-start z-10"><div className={`font-semibold text-sm ${data ? `text-${a}-100` : `text-${n}-500`}`}>{ench}</div>{data && <Check size={14} className={`text-${a}-400`} />}</div>
+                                                    <div className="flex justify-between items-start z-10">
+                                                        <div className={`font-semibold text-sm ${textClass} truncate pr-2`}>{ench}</div>
+                                                        {data && <Check size={14} className={`text-${a}-400 shrink-0`} />}
+                                                    </div>
                                                     {data ? (
                                                         <div className="z-10 mt-auto"><div className="flex items-end justify-between"><div className={`text-xs text-${n}-400 flex flex-col`}><span className={`font-mono text-[10px] text-${n}-500`}>{data.villagerId}</span><span className="flex items-center gap-1"><MapPin size={10} /> {data.location}</span></div><div className={`font-mono font-bold text-${a}-300 bg-${a}-900/30 px-2 py-1 rounded text-sm border border-${a}-500/20`}>{data.price} <span className="text-[10px]">EM</span></div></div></div>
                                                     ) : <div className="flex-1 flex items-center justify-center opacity-10"><BookOpen size={24} /></div>}
@@ -1267,10 +1360,23 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-1">
-                                        <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Location</label>
-                                        <input placeholder="e.g. Hall A, Pod 3" className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none placeholder-${n}-600`} value={newVillager.location} onChange={e => setNewVillager({...newVillager, location: e.target.value})} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Status</label>
+                                            <div className="relative">
+                                                <select className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none appearance-none`} value={newVillager.status} onChange={e => setNewVillager({...newVillager, status: e.target.value})}>
+                                                    <option value="Active">Active</option>
+                                                    <option value="Terminated">Terminated</option>
+                                                </select>
+                                                <div className={`absolute right-3 top-3.5 pointer-events-none text-${n}-500`}><ArrowUpDown size={14}/></div>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Location</label>
+                                            <input placeholder="e.g. Hall A, Pod 3" className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none placeholder-${n}-600`} value={newVillager.location} onChange={e => setNewVillager({...newVillager, location: e.target.value})} />
+                                        </div>
                                     </div>
+
                                     <div className={`bg-${n}-900/30 p-4 rounded-xl border border-${n}-700/50`}>
                                         <div className="flex justify-between items-center mb-4">
                                             <label className={`text-xs uppercase text-${p}-400 font-bold flex items-center gap-2 tracking-wider`}><Coins size={14}/> {editingTradeIndex !== null ? 'Update Trade' : 'Add Trades'}</label>
@@ -1393,7 +1499,14 @@
                                         <label className={`text-xs uppercase text-${n}-400 font-bold ml-1`}>Notes</label>
                                         <textarea placeholder="Any special details..." className={`w-full bg-${n}-900/50 border border-${n}-700 rounded-lg p-3 text-white focus:border-${p}-500 outline-none h-20 placeholder-${n}-600 resize-none`} value={newVillager.notes} onChange={e => setNewVillager({...newVillager, notes: e.target.value})} />
                                     </div>
-                                    <button type="submit" className={`w-full bg-gradient-to-r from-${s}-600 to-orange-600 hover:from-${s}-500 hover:to-orange-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-${s}-900/20 flex justify-center items-center gap-2 transform active:scale-[0.99]`}><Save size={18} />{editingId ? 'Update Record' : 'Log Villager'}</button>
+                                    <div className="flex flex-col gap-3">
+                                        <button type="submit" className={`w-full bg-gradient-to-r from-${s}-600 to-orange-600 hover:from-${s}-500 hover:to-orange-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-${s}-900/20 flex justify-center items-center gap-2 transform active:scale-[0.99]`}><Save size={18} />{editingId ? 'Update Record' : 'Log Villager'}</button>
+                                        {editingId && (
+                                            <button type="button" onClick={() => deleteVillager(editingId)} className={`w-full bg-red-900/10 hover:bg-red-900/20 text-red-400 border border-red-900/30 font-bold py-3 rounded-xl transition-all flex justify-center items-center gap-2`}>
+                                                <Trash2 size={16} /> Delete Record Permanently
+                                            </button>
+                                        )}
+                                    </div>
                                 </form>
                             </div>
                         </div>
